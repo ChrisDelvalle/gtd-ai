@@ -441,7 +441,7 @@ function Chat() {
                                         ? "demo-frame expanded-frame"
                                         : "demo-frame"
                                     }
-                                    title={`GTD widget — ${s.title}${index === "0" ? "" : " — Recommended task"}`}
+                                    title={`GTD widget — ${s.title}${index === "0" ? "" : " — Recommended tasks"}`}
                                     src={`../widget/#${s.id}:${index}`}
                                     ref={(node) => {
                                       if (node) frames.current.set(key, node);

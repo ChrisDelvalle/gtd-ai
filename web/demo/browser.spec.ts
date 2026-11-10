@@ -553,11 +553,20 @@ for (const width of [390, 1440]) {
       'iframe[title="GTD widget — Before school pickup"]',
     );
     const task = page.frameLocator(
-      'iframe[title="GTD widget — Before school pickup — Recommended task"]',
+      'iframe[title="GTD widget — Before school pickup — Recommended tasks"]',
     );
     const title = "Prepare the scrubbed exception replay for the release gate";
     await expect(
       task.getByRole("button", { name: `Details: ${title}`, exact: true }),
+    ).toBeVisible();
+    await expect(task.getByRole("button", { name: /^Details:/ })).toHaveCount(
+      2,
+    );
+    await expect(
+      task.getByRole("button", {
+        name: "Details: Send the signed winter pickup authorization",
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       chart.getByRole("region", { name: "Priorities chart" }),
@@ -570,11 +579,11 @@ for (const width of [390, 1440]) {
     await task
       .getByRole("button", { name: "Expand view", exact: true })
       .click();
-    await expect(page.locator('iframe[title$="Recommended task"]')).toHaveClass(
-      /expanded-frame/,
-    );
+    await expect(
+      page.locator('iframe[title$="Recommended tasks"]'),
+    ).toHaveClass(/expanded-frame/);
     const slide = await page
-      .locator('iframe[title$="Recommended task"]')
+      .locator('iframe[title$="Recommended tasks"]')
       .evaluate((el) => {
         const animation = el
           .getAnimations()

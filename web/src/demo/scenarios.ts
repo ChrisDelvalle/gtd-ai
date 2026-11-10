@@ -52,6 +52,10 @@ export function runScenario(
                   t.title ===
                   "Prepare the scrubbed exception replay for the release gate",
               )!.id,
+              store.records.find(
+                (t) =>
+                  t.title === "Send the signed winter pickup authorization",
+              )!.id,
             ],
           },
         },
@@ -137,7 +141,7 @@ export function runScenario(
     });
     return {
       response:
-        "Added all three:\n\n- **Priya:** check whether the refund test is still failing. I’ve set aside five minutes at **1:15 this afternoon**, under the payment verification project.\n- **Daniel:** ask for a photo of the pickup notice. I penciled in **7:30 tonight**; move it if another time suits you better.\n- **Library bag hook:** saved in **Someday**, with no deadline.\n\nNo messages sent.",
+        "Added all three:\n\n- **Priya:** check whether the refund test is still failing. I’ve set aside five minutes at **1:15 this afternoon**, under the payment verification project.\n- **Daniel:** ask for a photo of the pickup notice. I penciled in **7:30 tonight**; move it if another time suits you better.\n- **Library bag hook:** saved in **Someday**, with no deadline.",
       launch: {
         page: "Results",
         input: { from_request_ids: ["script-capture-once"] },

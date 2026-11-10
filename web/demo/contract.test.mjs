@@ -470,7 +470,17 @@ test("scripted conversations remain independent and capture is exactly once", ()
   const pickup = store(),
     energy = store(),
     captureStore = store();
-  assert.equal(runScenario(pickup, "pickup").launch.page, "Charts");
+  const priorities = runScenario(pickup, "pickup");
+  assert.equal(priorities.launch.page, "Charts");
+  assert.deepEqual(
+    priorities.additionalLaunches[0].input.task_ids.map(
+      (id) => pickup.records.find((t) => t.id === id).title,
+    ),
+    [
+      "Prepare the scrubbed exception replay for the release gate",
+      "Send the signed winter pickup authorization",
+    ],
+  );
   const small = runScenario(energy, "energy");
   assert.equal(small.launch.page, "Tasks");
   runScenario(captureStore, "capture");
