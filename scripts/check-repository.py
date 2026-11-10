@@ -53,7 +53,9 @@ for path in paths:
         errors.append(f"{path}: personal absolute path")
     if path.suffix == ".md":
         prose = re.sub(r"```.*?```", "", text, flags=re.S)
-        for target in re.findall(r"\]\(([^)]+)\)", prose):
+        targets = re.findall(r"\]\(([^)]+)\)", prose)
+        targets += re.findall(r'<(?:img|a)\b[^>]*?\b(?:src|href)=["\']([^"\']+)["\']', prose)
+        for target in targets:
             target = target.split(' "')[0].split("#")[0]
             if not target or re.match(r"[a-z]+:", target):
                 continue

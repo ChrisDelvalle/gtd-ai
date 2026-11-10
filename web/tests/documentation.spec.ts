@@ -1,7 +1,5 @@
 import {test,expect} from "@playwright/test";
 import {randomUUID} from "node:crypto";
-import {mkdir,readFile} from "node:fs/promises";
-import {resolve} from "node:path";
 import {openWidget,title} from "./helpers/widget-host";
 
 test("public documentation uses only fresh fictional records",async({page,request,baseURL},info)=>{
@@ -29,8 +27,7 @@ test("public documentation uses only fresh fictional records",async({page,reques
   await page.getByRole("menuitemradio",{name:"Priorities",exact:true}).click();
   await expect(page.locator(".priority-square:enabled").first()).toBeVisible();
   await expect(page.getByText(examples[0][0] as string,{exact:true}).first()).toBeVisible();
-  const output=resolve("../docs/images");await mkdir(output,{recursive:true});
-  await page.screenshot({path:resolve(output,"home.png")});
+  await page.screenshot({path:info.outputPath("home.png")});
   await page.setViewportSize({width:390,height:844});
   await expect(page.locator(".priority-square")).toHaveCount(49);
   await page.screenshot({path:info.outputPath("home-phone.png")});
@@ -48,6 +45,6 @@ test("public widget screenshot uses a deterministic fictional host",async({page}
   await frame.getByRole("button",{name:`Details: ${title}`,exact:true}).click();
   await expect(frame.getByText("Review the material and choose the next action.",{exact:true})).toBeVisible();
   await expect(frame.locator(".task-expansion[data-resizing]")).toHaveCount(0);
-  await surface.screenshot({path:resolve("../docs/images/widget.png")});
+  await surface.screenshot({path:info.outputPath("widget.png")});
   await page.screenshot({path:info.outputPath("widget-context.png")});
 });

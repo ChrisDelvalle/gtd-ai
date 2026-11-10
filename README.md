@@ -2,32 +2,61 @@
 
 **A self-hosted task system for people and AI assistants.**
 
-Capture a loose thought, turn it into a concrete next action, and keep the context
-needed to finish it. Use the website yourself, or let an MCP-compatible assistant
-work with the same tasks and projects. Your next conversation can pick up where
-the last one stopped.
+<p align="center">
+  <img src="docs/images/home.png" width="800" alt="GTD Home with the priorities grid, featured task, and Next actions">
+</p>
 
-GTD combines a Getting Things Done workflow with a shared website and interactive
-MCP app for ChatGPT and Claude. Each invited user has a separate account.
+## Why GTD?
 
-![GTD Home and the priorities chart](docs/images/home.png)
+Keeping a detailed task system up to date can become a job of its own. GTD lets
+your assistant handle that upkeep. Talk through a project, an idea, or a change
+of plan, and your assistant can turn it into concrete actions, dependencies,
+dates, and work blocks. Those details help GTD surface what needs your attention
+next, without making you maintain every field yourself.
+
+Your tasks also keep the useful context from those conversations: decisions,
+progress, unresolved questions, and next steps. A fresh conversation or a
+different assistant can read those notes and continue where you left off,
+so you spend less time repeating yourself.
+
+Use the website yourself or work through the interactive MCP app in ChatGPT or
+Claude. Both use the same tasks and projects, with a separate account for each user.
 
 ## Features
 
-- **One place for commitments.** Inbox, Next, Waiting, Blocked, Someday, projects,
-  and reviews keep ideas separate from work you have committed to doing.
-- **Useful context for assistants.** Briefs explain the action, human notes hold
-  supporting detail, and agent notes preserve decisions, progress, and uncertainty.
-- **Planning that respects dependencies.** Deadlines, Start by, availability,
-  work blocks, effort, estimates, and inherited priorities help surface useful work.
-- **A history you can trust.** Version checks, retry-safe requests, atomic batches,
-  audit history, undo, and date-filtered recaps make changes inspectable.
-- **Visual perspective.** Completion/activity heatmaps, stacked activity bars,
-  and a priorities matrix show both recent progress and the work ahead.
-- **Your infrastructure.** PostgreSQL holds authoritative data; search is derived.
-  Invitations and per-account authorization keep personal task lists separate.
+### Priorities
 
-![Interactive GTD task card](docs/images/widget.png)
+See urgency and importance together. Tasks inherit priority from the work they
+block, so a small prerequisite can get the attention a critical outcome deserves.
+Select a square to browse its tasks.
+
+### Task Context and Planning
+
+Capture ideas in Inbox and clarify them into specific next actions. Keep a brief,
+supporting notes, and agent notes alongside each task. Deadlines, Start by,
+availability, estimates, and work blocks give the plan enough detail to be useful.
+
+![Task detail with a brief, deadline, Start by, estimate, buffer, and dependency](docs/images/task-detail.png)
+
+### Projects and Dependencies
+
+Group actions around an outcome, see what is ready, and track what is waiting or
+blocked. Someday keeps possibilities separate from current commitments.
+
+![Projects with next-action and blocked-task counts](docs/images/projects.png)
+
+### Activity and Reviews
+
+Look back over a year of completed tasks, or inspect daily activity by the type
+of change. Select a date to see the records behind it.
+
+![A year of completed tasks in the completion heatmap](docs/images/completion-heatmap.png)
+
+![Daily activity stacked by change category](docs/images/activity-bars.png)
+
+Audit history, undo, version checks, and retry-safe batches make changes
+inspectable. Date-filtered history gives assistants the material for a weekly
+recap without relying on the current conversation.
 
 ## Getting Started
 
