@@ -1,5 +1,9 @@
 # Demo design verification
 
+## Inbox example and response formatting
+
+Intended behavior: four independent conversations, including a small fictional inbox with two actionable emails and one newsletter. A collapsed “Read 3 emails” disclosure lets visitors inspect the sources. Sending creates two tasks exactly once with the requested deadlines, projects, and source context; it never sends a reply or creates a task from the newsletter. The Results card appears before the assistant's summary. Replies use short paragraphs, real lists, and selective bold emphasis, following the supplied live reference without copying personal content. Formatting stays stable while text streams, including within bold phrases. Verify both themes, phone/desktop, expansion, source disclosure, reset, and conversation isolation before publication.
+
 ## Scripted chat streaming update
 
 Intended behavior: sending a prepared message opens the ready widget with a restrained 380ms height/fade transition, then streams the reply in short word groups underneath. Keep each conversation's progress when switching chats; do not rerun captures or restart completed replies. Reduced-motion preferences show the complete reply and card immediately. Remove the composer's visible labels, footer annotation, and post-send instructions; keep its message and send control, accessible names, and the small host-level demo identifier. Verify phone/desktop, both themes, switching during streaming, reduced motion, and inline/expanded cards before publication.
@@ -13,7 +17,7 @@ Reference: the user-selected GTD Demo Reference conversation, inspected read-onl
 ## Intended presentation
 
 - Website: the shared application, light by default, with a small Demo/reset/theme control. Priority squares center on the available content pane, not the viewport or sidebar.
-- Chat: measured 52px navigation rail, 284px desktop sidebar, 768px conversation column, 16px system text at 26px line height, purple user messages, dark surfaces, and a bottom composer. Only the three prepared conversations and relevant demo controls are present.
+- Chat: measured 52px navigation rail, 284px desktop sidebar, 768px conversation column, 16px system text at 26px line height, purple user messages, dark surfaces, and a bottom composer. Only the four prepared conversations and relevant demo controls are present.
 - Expanded card: the existing live iframe remains mounted. Desktop uses a viewer beginning 405px from the left, a 53px host toolbar, and a centered 780px application area. Phone uses the full content width. Closing returns to the inline card and restores keyboard focus.
 
 ## Checks

@@ -1,9 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Markdown from "react-markdown";
+
+type TextTree = { type: string; value?: string; children?: TextTree[] };
+
+// Parse the complete reply, then reveal its text. A half-streamed bold phrase
+// remains bold instead of flashing Markdown punctuation or shifting list layout.
+function revealText(limit: number) {
+  return () => (tree: TextTree) => {
+    let remaining = limit;
+    const reveal = (node: TextTree): boolean => {
+      if (remaining <= 0) return false;
+      if (node.type === "text") {
+        node.value = (node.value || "").slice(0, remaining);
+        remaining -= node.value.length;
+        return !!node.value;
+      }
+      node.children = node.children?.filter(reveal);
+      return !!node.children?.length;
+    };
+    tree.children = tree.children?.filter(reveal);
+  };
+}
 
 /** Presentation only: the scenario has already produced its complete result. */
 export function StreamedReply({ text }: { text: string }) {
   const [visible, setVisible] = useState("");
   const [finished, setFinished] = useState(false);
+  const plugins = useMemo(
+    () => [revealText(finished ? Infinity : visible.length)],
+    [visible.length, finished],
+  );
   useEffect(() => {
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
     const words = text.match(/\S+\s*/g) || [];
@@ -52,10 +78,14 @@ export function StreamedReply({ text }: { text: string }) {
       aria-atomic="true"
       aria-busy={!finished}
     >
-      {visible &&
-        visible
-          .split("\n\n")
-          .map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+      <Markdown
+        allowedElements={["p", "strong", "em", "ul", "ol", "li"]}
+        unwrapDisallowed
+        skipHtml
+        rehypePlugins={plugins}
+      >
+        {text}
+      </Markdown>
     </div>
   );
 }

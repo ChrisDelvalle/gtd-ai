@@ -485,6 +485,34 @@ test("scripted conversations remain independent and capture is exactly once", ()
   assert.equal(result.records.length, 3);
   assert.equal(result.records.filter((t) => t.status === "someday").length, 1);
 });
+test("email triage captures only the two actionable messages, exactly once", () => {
+  const s = store(),
+    untouched = store();
+  const first = runScenario(s, "inbox");
+  assert.deepEqual(runScenario(s, "inbox"), first);
+  assert.equal(first.launch.page, "Results");
+  const { records } = s.execute("request_results", first.launch.input);
+  assert.equal(records.length, 2);
+  assert.equal(s.records.length, fixture.records.length + 2);
+  assert.equal(s.changes.length, fixture.changes.length + 2);
+  assert.equal(untouched.records.length, fixture.records.length);
+  const work = records.find((t) => t.title.includes("Priya"));
+  const school = records.find((t) => t.title.includes("school office"));
+  assert.equal(work.due_date, "2026-11-06");
+  assert.equal(work.deadline_time.time, "16:00");
+  assert.equal(school.due_date, "2026-11-09");
+  assert.equal(school.deadline_time.time, "12:00");
+  for (const task of records) {
+    assert.equal(task.deadline_time.timezone, "America/New_York");
+    assert.equal(task.status, "next");
+    assert.ok(task.project_id);
+    assert.match(task.agent_notes, /Source: demo-mail-/);
+    assert.match(task.agent_notes, /No reply has been sent/);
+  }
+  assert.notEqual(work.project_id, school.project_id);
+  assert.ok(!records.some((t) => /library/i.test(t.title)));
+  assert.match(first.response, /haven’t replied/);
+});
 test("project lifecycle changes validate the final atomic batch", () => {
   const s = store(),
     project = s.execute("create_project", {

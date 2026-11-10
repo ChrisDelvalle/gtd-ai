@@ -246,7 +246,22 @@ button svg {
   margin: 0 0 20px;
   white-space: pre-wrap;
 }
-.streamed-reply[aria-busy="true"] p:last-child::after {
+.streamed-reply strong {
+  font-weight: 600;
+}
+.streamed-reply ul,
+.streamed-reply ol {
+  margin: 0 0 20px;
+  padding-left: 26px;
+}
+.streamed-reply li {
+  padding-left: 3px;
+  margin-bottom: 8px;
+}
+.streamed-reply[aria-busy="true"] > p:last-child::after,
+.streamed-reply[aria-busy="true"]
+  > :is(ol, ul):last-child
+  > li:last-child::after {
   content: "";
   display: inline-block;
   width: 6px;
@@ -255,6 +270,68 @@ button svg {
   border-radius: 50%;
   background: currentColor;
   vertical-align: middle;
+}
+.inbox-preview {
+  margin: 0 0 20px;
+}
+.inbox-preview summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+  min-height: 44px;
+}
+.inbox-preview summary::-webkit-details-marker {
+  display: none;
+}
+.inbox-preview summary:focus-visible {
+  outline: 2px solid #a99ce9;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.inbox-preview > summary {
+  color: var(--chat-muted);
+}
+.inbox-preview details[open] > summary > svg:last-child,
+.inbox-preview[open] > summary > svg:last-child {
+  transform: rotate(90deg);
+}
+.inbox-messages {
+  border: 1px solid var(--chat-border);
+  border-radius: 16px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.inbox-message + .inbox-message {
+  border-top: 1px solid var(--chat-border);
+}
+.inbox-message > summary {
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 21px;
+}
+.inbox-message > summary > span {
+  flex: 1;
+  min-width: 0;
+}
+.inbox-message > summary strong,
+.inbox-message > summary > span > span {
+  display: block;
+}
+.inbox-message > summary strong {
+  font-weight: 500;
+}
+.inbox-message time {
+  color: var(--chat-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.inbox-message p {
+  padding: 0 16px 16px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 23px;
 }
 .chat-result {
   display: grid;

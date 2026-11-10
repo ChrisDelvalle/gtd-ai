@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { scenarios, type ScenarioId } from "./scenarios";
 import { StreamedReply } from "./streamed-reply";
+import { InboxPreview } from "./inbox";
 type Progress = {
   sent: boolean;
   response: string;
@@ -231,6 +232,7 @@ function Chat() {
                   <>
                     <div className="user-message">{s.prompt}</div>
                     <div className="assistant-message">
+                      {s.id === "inbox" && p.response && <InboxPreview />}
                       {!p.response && !p.error && (
                         <p role="status">Opening GTD…</p>
                       )}

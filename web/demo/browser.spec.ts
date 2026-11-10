@@ -395,7 +395,9 @@ for (const width of [390, 1440]) {
 
     const partial = await reply.textContent();
     expect(partial!.length).toBeGreaterThan(first!.length);
-    expect(partial).not.toContain("about 12 minutes.");
+    expect(partial).not.toContain("confirm they’ve received it.");
+    expect(partial).not.toContain("**");
+    await expect(reply.locator("strong").first()).toBeVisible();
     await page.screenshot({ path: info.outputPath("streaming.png") });
     if (width === 390)
       await page
@@ -416,7 +418,8 @@ for (const width of [390, 1440]) {
       .getByRole("button", { name: "Before school pickup", exact: true })
       .click();
     await expect(reply).toHaveAttribute("aria-busy", "false");
-    await expect(reply).toContainText("should take about 12 minutes.");
+    await expect(reply).toContainText("confirm they’ve received it.");
+    await expect(reply.locator("ol > li")).toHaveCount(2);
     await expect(pickup.locator(".chat-result")).toBeVisible();
     expect(
       await pickup
@@ -448,3 +451,97 @@ test("reduced motion skips streaming and card transitions", async ({
       .evaluate((el) => getComputedStyle(el).transitionDuration),
   ).toBe("0s");
 });
+
+for (const width of [390, 1440]) {
+  test(`email sources and structured replies at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`${base}/chat/#inbox`);
+    if (width === 390)
+      await page.getByRole("button", { name: "Use light theme" }).click();
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    const thread = page.getByRole("region", {
+      name: "From my inbox",
+      exact: true,
+    });
+    const reply = thread.locator(".streamed-reply");
+    await expect(reply).toHaveAttribute("aria-busy", "false");
+    await expect(reply.locator("ul > li")).toHaveCount(2);
+    await expect(reply.locator("strong").first()).toHaveText(
+      "Two emails need a response.",
+    );
+    await expect(reply).toContainText("I haven’t replied to either email.");
+    await expect(thread.locator(".inbox-messages")).not.toBeVisible();
+    await thread.locator(".inbox-preview > summary").click();
+    await expect(thread.locator(".inbox-message")).toHaveCount(3);
+    await thread
+      .locator(".inbox-message")
+      .filter({ hasText: "Priya Shah" })
+      .locator("summary")
+      .click();
+    await expect(thread.getByText(/Just the two names is fine/)).toBeVisible();
+    const frame = page.frameLocator(
+      'iframe[title="GTD widget — From my inbox"]',
+    );
+    await expect(frame.getByRole("button", { name: /^Details:/ })).toHaveCount(
+      2,
+    );
+    await expect(
+      frame.getByRole("button", {
+        name: "Details: Send Priya the owner and backup for Monday's retry rehearsal",
+        exact: true,
+      }),
+    ).toBeVisible();
+    expect(
+      await thread.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    await page.screenshot({ path: info.outputPath("email-sources.png") });
+    await thread.locator(".inbox-preview > summary").click();
+    await reply.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath("email-summary.png") });
+    await frame
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await frame
+      .getByRole("button", {
+        name: "Details: Confirm Tuesday's pickup adult with the school office",
+        exact: true,
+      })
+      .click();
+    await expect(
+      frame.getByText(
+        "Check the plan with Daniel, then tell the school who will collect Nico on November 10.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await page
+      .getByRole("button", { name: "Open sidebar", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Twenty minutes, low energy", exact: true })
+      .click();
+    if (width === 390)
+      await page
+        .getByRole("button", { name: "Open sidebar", exact: true })
+        .click();
+    await page
+      .getByRole("button", { name: "From my inbox", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Send prepared example" }),
+    ).toBeDisabled();
+    await expect(frame.getByRole("button", { name: /^Details:/ })).toHaveCount(
+      2,
+    );
+    await page
+      .getByRole("banner")
+      .getByRole("button", { name: "Reset demo", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Send prepared example" }),
+    ).toBeEnabled();
+    await expect(page.locator(".inbox-preview")).toHaveCount(0);
+  });
+}
