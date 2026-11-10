@@ -35,3 +35,11 @@ The reconstruction intentionally replaces host branding and excludes account, mo
 Generated evidence is in ignored `web/demo-results/` after running the browser suite. CI retains failure screenshots and traces for seven days. Publication and data-contract acceptance are recorded in [the demo documentation](docs/demos/README.md).
 
 Screenshot review also caught Results task titles falling back to default bordered, centered buttons. Results now uses the same task-list styling wrapper as other shared views. A new border/alignment assertion was confirmed to fail on the previous build and pass on the candidate.
+
+## Final reference fidelity pass
+
+Intended behavior: the expanded iframe leaves no empty card slot in the conversation; its caption remains, and later content moves up. Preserve the same iframe and its edits, restore the inline position and keyboard focus on close, and slide the viewer in/out from the right. The desktop split is resizable with keyboard and pointer controls; a full-width viewer is available. Phone uses a full-width viewer. The website link appears only as text at the bottom of the sidebar.
+
+Compare measured native message bubbles (70% desktop maximum width, 10px/16px padding, 22px radius, purple #4e2f88), 16px/26px body text, 14px/20px sidebar text, compact empty desktop composer, and 52px host toolbar. Keep the demo identity and omit account, model, voice, upload, and unrelated navigation controls. A brief local working/opening sequence precedes cards, then the readable reply streams beneath them. Copy controls act on the fictional text only.
+
+Verification matrix: 360/390/768px phone/tablet, both sides of 800px and 1000px layout breakpoints, 1280/1440/1920px desktops, sidebar open/closed, light/dark, inline/split/full viewers, keyboard and reduced motion. Check geometry against the pane, not the viewport; no blank slot, iframe reload, horizontal overflow, focus loss, or duplicated scripted writes. Screenshots must be compared with the source at matching viewports. The source is the user-authorized reference conversation; its private content must stay out of the repository and published artifacts.

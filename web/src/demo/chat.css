@@ -101,11 +101,6 @@ button svg {
   background: var(--chat-bg);
   z-index: 40;
 }
-.chat-rail a {
-  display: flex;
-  padding: 8px;
-  border-radius: 8px;
-}
 .chat-sidebar {
   font-feature-settings: normal;
   position: fixed;
@@ -372,6 +367,9 @@ button svg {
   position: relative;
   margin-bottom: 20px;
 }
+.inline-card-slot:has(.expanded-frame) {
+  margin-bottom: 0;
+}
 .demo-frame {
   display: block;
   width: 100%;
@@ -528,9 +526,6 @@ button svg {
     height: 52px;
     bottom: auto;
     background: none;
-  }
-  .chat-rail > a {
-    display: none;
   }
   .conversation-area {
     margin-left: 0;

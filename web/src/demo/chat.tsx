@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUp,
@@ -51,6 +51,25 @@ function Chat() {
   const frames = useRef(new Map<string, HTMLIFrameElement>()),
     closeButton = useRef<HTMLButtonElement>(null),
     sidebarButton = useRef<HTMLButtonElement>(null);
+  const anchor = useRef<{ element: HTMLElement; top: number } | null>(null);
+  function preserveCaption(key: string) {
+    const element = frames.current
+      .get(key)
+      ?.closest(".chat-result-body")
+      ?.querySelector<HTMLElement>(".tool-caption");
+    if (element)
+      anchor.current = { element, top: element.getBoundingClientRect().top };
+  }
+  useLayoutEffect(() => {
+    const saved = anchor.current;
+    anchor.current = null;
+    if (saved?.element.isConnected) {
+      const scroll = saved.element.closest(".chat-scroll");
+      if (scroll)
+        scroll.scrollTop +=
+          saved.element.getBoundingClientRect().top - saved.top;
+    }
+  }, [expanded]);
   const context = useRef({ theme, expanded });
   context.current = { theme, expanded };
   function cancelClose() {
@@ -62,6 +81,7 @@ function Chat() {
     if (closeTimer.current) return;
     const finish = () => {
       closeTimer.current = null;
+      preserveCaption(key);
       setExpanded(null);
       setClosing(false);
       post(key, "restore-focus");
@@ -88,7 +108,7 @@ function Chat() {
         theme,
         mode: expanded === id ? "fullscreen" : "inline",
       });
-    if (expanded) closeButton.current?.focus();
+    if (expanded) closeButton.current?.focus({ preventScroll: true });
   }, [theme, expanded]);
   useEffect(() => {
     const hash = () => {
@@ -166,7 +186,11 @@ function Chat() {
             }));
         }
       }
-      if (event.data.type === "height" && Number.isFinite(event.data.height))
+      if (
+        event.data.type === "height" &&
+        context.current.expanded !== key &&
+        Number.isFinite(event.data.height)
+      )
         setProgress((p) => ({
           ...p,
           [id]: {
@@ -185,6 +209,7 @@ function Chat() {
       }
       if (event.data.type === "expand") {
         cancelClose();
+        preserveCaption(key);
         setCurrent(id);
         setExpanded(key);
         setSidebar(false);
@@ -236,9 +261,6 @@ function Chat() {
         >
           <PanelLeft size={20} />
         </button>
-        <a href="../website/" aria-label="Website demo">
-          <PanelTop size={20} />
-        </a>
       </nav>
       {sidebar && (
         <button
@@ -344,7 +366,9 @@ function Chat() {
                               </div>
                               <div
                                 className="inline-card-slot"
-                                style={{ height: card.height }}
+                                style={{
+                                  height: expanded === key ? 0 : card.height,
+                                }}
                               >
                                 <iframe
                                   className={

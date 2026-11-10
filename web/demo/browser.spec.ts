@@ -717,3 +717,52 @@ for (const width of [390, 1440]) {
     await expect(page.locator(".inbox-preview")).toHaveCount(0);
   });
 }
+
+for (const width of [390, 880, 1440]) {
+  test(`expanded card leaves no conversation gap at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(`${base}/chat/#energy`);
+    await expect(
+      page
+        .getByRole("navigation", { name: "Demo navigation" })
+        .getByRole("link"),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    const iframe = page.locator(
+      'iframe[title="GTD widget — Twenty minutes, low energy"]',
+    );
+    const frame = page.frameLocator(
+      'iframe[title="GTD widget — Twenty minutes, low energy"]',
+    );
+    await expect(
+      page.locator(".chat-scroll:not([hidden]) .streamed-reply"),
+    ).toHaveAttribute("aria-busy", "false");
+    const savedFrame = await iframe.elementHandle();
+    await frame
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await expect(page.locator(".expanded-frame")).toBeVisible();
+    await expect(
+      page.locator(".inline-card-slot:has(.expanded-frame)"),
+    ).toHaveCSS("height", "0px");
+    await expect(
+      page.locator(".inline-card-slot:has(.expanded-frame)"),
+    ).toHaveCSS("margin-bottom", "0px");
+    expect(await savedFrame!.evaluate((el) => el.isConnected)).toBe(true);
+    await page.screenshot({ path: info.outputPath("expanded-reflow.png") });
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await expect(
+      frame.getByRole("button", { name: "Expand view", exact: true }),
+    ).toBeFocused();
+    expect(await savedFrame!.evaluate((el) => el.isConnected)).toBe(true);
+    expect(
+      (await page
+        .locator(".chat-scroll:not([hidden]) .inline-card-slot")
+        .boundingBox())!.height,
+    ).toBeGreaterThan(80);
+    await page.screenshot({ path: info.outputPath("restored-inline.png") });
+  });
+}
