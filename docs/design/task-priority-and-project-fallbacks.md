@@ -318,11 +318,14 @@ Order within the eligible workflow group:
    the buffer target here when it supplies a strictly greater contribution.
    A distant deadline with zero boost does not beat current planned work merely
    by existing.
-5. Current work block before otherwise equivalent unscheduled work.
-6. Earlier remaining timing, taking the earliest of the relevant selected
-   plan/occurrence and distant constraint dates, with absent values last.
-   Creation sequence and ID finally make the order stable. Merely having a plan
-   next year must not beat an otherwise equivalent deadline eight days away.
+5. Earlier additional approaching actual constraints, if the leading commitment
+   ties. For example, two tasks with the same Start by today can still have
+   different completion deadlines tomorrow and next week. Compare those before
+   current work blocks; a plan should not conceal the second real commitment.
+6. Current work block before otherwise equivalent unscheduled work.
+7. Earlier remaining timing from the relevant selected plan/occurrence and
+   distant constraint dates, with absent values last. Merely having a plan next
+   year must not beat an otherwise equivalent deadline eight days away.
 
 “Relevant selected plan” uses the same current/next/latest-ended block selection
 as the matrix, then occurrence fallback. It never adds together multiple blocks.
@@ -333,6 +336,142 @@ or number of work blocks is an extra score multiplier.
 Recommended retains the existing ready-work-first workflow grouping in combined
 lists. Home chooses ready Next work. Explicit field sorts, in contrast, should
 order the whole selected task set without a hidden workflow grouping.
+
+### Complete tie-breaking contract
+
+A good recommendation is debatable; a reproducible order should not be. Every
+supported task comparison must end in a unique order for distinct retained
+records in the same account snapshot. Do not use database iteration order,
+browser locale, current wall time during comparison, or random choice.
+
+Compute one key per task from the frozen evaluation time, then compare keys
+lexicographically. Each key component has one direction; do not switch rules
+depending on the pair being compared.
+
+Define the **semantic key** `R(t)` from the seven steps above:
+
+| Position | Component | Direction and missing-value rule |
+| --- | --- | --- |
+| 1 | Base score `I + max(H, B)` | Higher first; `I` is resolved importance, `H` actual-constraint contribution, `B` buffer contribution. |
+| 2 | `H` | Higher first. An actual constraint outranks a buffer-only tie. |
+| 3 | `I` | Higher first. |
+| 4 | Promoted timing instant | Earlier first. If `max(H,B)=0`, absent. Otherwise use the actual winning constraint when `H >= B`, or the buffer target when `B > H`. |
+| 5 | Remaining approaching actual-constraint instants | Earlier first, lexicographically; missing slots last. Include constraints with positive contribution, excluding an instant already used at position 4. |
+| 6 | Current work block | Present first; this means an own block in progress, not merely `started=true`. |
+| 7 | Remaining timing instants | Earlier first, lexicographically; missing slots last. Include the selected plan instant and zero-contribution actual constraints. |
+
+For position 4, choose the earliest actual instant among constraints with the
+winning actual contribution. For position 5, there are at most two actual
+constraints (deadline and outstanding Start by). Position 7 has at most those
+two distant constraints plus one selected plan. Deduplicate equal instants
+within these components and exclude any instant already consumed by an earlier
+timing component. Pad to fixed widths with absence. Two fields naming the same
+commitment instant must not create an extra tie advantage.
+
+Use resolved UTC integer instants, with calendar dates converted by the existing
+timezone/precision rules. Absence sorts after a real instant; do not substitute
+epoch zero, parse invalid values as today, or use locale-sensitive string order.
+Date-only and timed constraints retain their different urgency-band semantics;
+normalizing their instants is not permission to discard that distinction.
+
+The selected plan contributes exactly one instant:
+
+- **Current block:** its finish. If several overlap, select the earliest finish;
+  use a stable block ID when the bounds tie. For equally urgent active work, a
+  block ending soon should precede an all-day block that merely began earlier.
+- **No current block, but future blocks:** the earliest upcoming start; use
+  finish and stable block ID only to select between otherwise identical starts.
+- **Only ended blocks:** the most recent finish, with stable block ID selecting
+  between equal finishes. Between otherwise equivalent tasks, earlier missed
+  finishes sort first. Additional old blocks do not stack.
+- **No usable blocks, but an occurrence date:** start of that calendar date in
+  the series timezone, used only as a soft chronological tie-breaker.
+- **No plan:** no plan instant. Do not borrow a dependent's block into the task's
+  own base facts; dependency propagation below retains its source separately.
+
+Separate task comparison from choosing an inherited source. Define `E(t)` as
+the best semantic key among `R(t)` and eligible committed dependents' already
+inherited `E` keys. This is the strongest-whole rule from section 7. Neither
+creation order nor task/source IDs belongs inside that propagated semantic key.
+
+The complete Recommended task key is:
+
+```text
+archive group
+workflow group
+E(t)                         # strongest whole semantic recommendation
+R(t)                         # task's own resolved stakes, if E ties
+already started              # own unfinished work first, if the above ties
+task creation sequence       # older retained task first
+immutable task ID            # deterministic bytewise ascending order
+```
+
+Preserve the existing task workflow order: Next, Inbox, Waiting, Blocked,
+Someday, Done; live/unarchived records precede archived records when combined.
+Eligibility filters are still applied first. In a Next-only view the workflow
+component ties automatically. Closed records cannot supply live dependency
+influence; their default Done/Archive views still use Recently changed.
+
+The additional `R(t)` tie-break is useful when two prerequisites inherit the
+same high-priority commitment: prefer the one that also has stronger own
+resolved work. It does not add scores or manufacture a combined importance/
+urgency pair. If there is no inherited advantage, `E(t)=R(t)` and comparing the
+base again has no effect.
+
+Then prefer an otherwise equivalent task that the user has already started.
+This is a small encouragement to finish work, not a new urgency tier. Use only
+the task's own explicit `started` state, never a dependent's state or the fact
+that a work block has begun. Apply it to live, unarchived, unskipped unfinished
+tasks; treat it as neutral for closed work. Starting still fulfills Start by, so
+this late preference does not restore the urgency of a satisfied constraint.
+
+The trade-off is that a long-stalled started task can win an otherwise exact tie.
+Keep that visible and predictable rather than inventing an inactivity timeout.
+It cannot beat a stronger semantic recommendation, a stronger own base, or an
+earlier relevant timing commitment. There is no separate user-adjustable weight.
+
+Use the existing authoritative creation sequence, not last edit time. This
+gives an otherwise equal older task precedence without making age a boost above
+meaningful priority. Keep that sequence stable through ordinary edits, refresh,
+and undo/redo. If legacy/synthetic records share a sequence or creation timestamp,
+their immutable IDs settle the final tie. Identical IDs identify the same record
+and must be deduplicated or rejected, not treated as two sortable tasks.
+
+Equal semantic keys from different dependency sources need a deterministic
+explanation too: prefer the task's own key when equal; otherwise select the
+stable ultimate source ID. Source IDs break **provenance ties only**. They must
+not rank two prerequisites ahead of their own base facts or creation order.
+
+### Metadata deliberately excluded from default ties
+
+Using every available field would make the order more complicated without
+making it more trustworthy. The final creation-sequence/ID tail already removes
+all ambiguity. Additional metadata must justify a preference, not merely split
+another tie.
+
+| Metadata | Default treatment | Reason |
+| --- | --- | --- |
+| Remaining estimate and effort | User-specified filters; no automatic shortest/easiest-first tie | Otherwise demanding work repeatedly loses to quick wins. |
+| Location | Explicit context/search filter | The system does not know where the user can work from a task field alone. |
+| Actual start timestamp | Fulfills Start by and supplies the explicit started state; no timestamp-age ranking | Prefer started work late in the order, but do not infer current focus or add an ever-growing boost from when it began. |
+| Number of dependents or dependency depth | Inherit strongest stakes; no count/depth bonus | Splitting work into more records must not manufacture priority. |
+| Review date | Orders Review when selected; not an execution-priority tie | Reviewing a task is different from performing it. |
+| Updated time / number of edits | Recently changed sort only | Housekeeping edits should not bump tasks above otherwise equal work. |
+| Notes, agent context, links, title length | No default priority tie | Richer documentation is not evidence of greater importance. |
+| Project title, source ID, own versus project deadline | No semantic priority preference at equal resolved values | Alphabetical names and storage provenance do not change consequences. |
+
+Explicit field sorts remain simpler: the selected field/direction, then the
+task's creation sequence and ID. Do not quietly append Recommended to a plain
+Deadline or Importance sort. Search relevance likewise has an explicit stable
+tail when search scores tie. Mixed-type Results require a documented type-neutral
+key; they must not fall through to task-only metadata accidentally.
+
+A temporary reference-key check exercised the late started preference, older/ID
+tail, secondary constraints, block finish times, buffer precedence, inheritance,
+and duplicate timing. Forty-eight synthetic graph records retained a unique,
+identical order through twelve input/edge shuffles; changing excluded prose did
+not affect it. This checks the specification's ordering structure, not the Rust
+implementation, timezone resolution, UI, or real-world recommendation quality.
 
 ### Concrete comparisons
 
@@ -833,6 +972,17 @@ implementation and includes cases where the proposal has a known limitation.
 | Same revision crosses a timing boundary | New evaluation token refreshes derived facts even without a write. |
 | Exact recurring-task read in a non-default series timezone | Matches full-snapshot rank/placement, including occurrence-date tie-breaks. |
 | Immediate task has a very old buffer target | The actual immediate constraint, not that buffer, determines an otherwise equal timing tie. |
+| Same leading Start by, different approaching completion deadlines | Earlier additional deadline wins before a current-block preference; the second constraint is not lost. |
+| Same priority and two current blocks with different finishes | Earlier finish wins, not whichever task's block began earlier. |
+| Two prerequisites inherit the same recommendation | Compare their own resolved semantic keys next; do not use the donor's creation order or ID to rank the prerequisites. |
+| Equal semantic priority/timing, only one task already started | Started task first; its own state is a late tie-break before creation order. |
+| Started task versus a task with stronger priority/timing | Stronger semantic recommendation wins; started does not create a priority tier. |
+| A dependent is started but its prerequisite is not | No inherited started preference on the prerequisite. |
+| Two otherwise identical tasks with different creation sequences | Older retained task first. Edits and refreshes do not reset its position. |
+| Identical semantic data and creation sequence | Immutable task ID resolves the final tie deterministically. |
+| Source/SQL/graph iteration order changes | Same task order and stable explanation source for the same snapshot. |
+| Only notes, links, edit time, effort, or estimate changes without an active filter | No default ranking change unless a field also changes a documented semantic input. |
+| Duplicate commitment instants or equivalent blocks are added | No extra tie advantage; use distinct timing instants and one selected plan. |
 | Overlapping block begins before selected block ends | Next-change time includes that start; selection updates if the new block should win. |
 | Sequential work cannot fit before the inherited project deadline | No false feasibility claim or invented latest-start dates; explicit Start by can represent known lead time. |
 | Multiple accounts reuse the same record/query IDs | No shared results, preference leakage, sources, or tokens. |
@@ -853,6 +1003,14 @@ worsen its base rank; approaching a constraint cannot reduce its urgency band;
 project changes cannot override an explicit task field; adding duplicate blocks
 or dependency paths cannot stack score; visual filters cannot move a task's
 coordinates; selected field sorts are global and deterministic.
+
+For the complete comparator, verify antisymmetry, transitivity, and a unique
+order for distinct IDs. Shuffle input rows, dependency edges, and equal-priority
+sources and require identical output. Exercise missing timing, equal instants
+expressed in different zones, identical creation sequences, and the late
+started preference. Check that changes to excluded metadata do not change the
+order. Run the same fixtures through PostgreSQL, supported SQLite paths, and
+the demo; a client must not add its own undocumented tie-breakers.
 
 Exercise both storage paths, full/exact reads, inherited sources, frozen
 pagination, ordinary writes, retries, undo, and source deletion. Compare sum of
