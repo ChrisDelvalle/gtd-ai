@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible problem using non-sensitive details.
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, use private security reporting. Do not include task content, tokens, or identity exports."
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction with disposable data
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, host integration, and deployment platform

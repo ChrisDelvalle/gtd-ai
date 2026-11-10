@@ -1,0 +1,97 @@
+name: Deterministic checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: '1.93.0'
+          components: rustfmt, clippy
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.14.0'
+      - run: npm --prefix web ci && npm --prefix adapter ci
+      - run: npm --prefix web run build
+      - run: cp web/dist/widget-adapter.html adapter/widget.html
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets --features postgres-operator -- -D warnings
+      - run: cargo test --locked --features postgres-operator
+      - run: node --experimental-transform-types --test *.test.mjs *.test.ts
+        working-directory: web
+      - run: npm --prefix adapter test
+      - run: python3 -m unittest discover -s deploy/multi-user -p 'test_*.py'
+      - run: python3 -m unittest discover -s deploy/tests -p 'test_*.py'
+      - run: python3 -m unittest discover -s deploy/backups -p 'test_*.py'
+      - run: python3 scripts/check-repository.py
+      - run: python3 scripts/test-postgres.py
+  browsers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.93.0'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.14.0'
+      - run: npm --prefix web ci
+      - run: npm --prefix web run build && cargo build --locked
+      - run: npx --no-install playwright install --with-deps ${{ matrix.browser }}
+        working-directory: web
+      - run: node scripts/test-browser.mjs
+        env:
+          GTD_TEST_BROWSER: ${{ matrix.browser }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: failure()
+        with:
+          name: disposable-browser-${{ matrix.browser }}
+          path: web/test-results/
+          retention-days: 7
+  dependencies:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
+        with:
+          toolchain: '1.93.0'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.14.0'
+      - run: cargo install cargo-deny --version 0.19.7 --locked
+      - run: cargo deny check
+      - run: npm --prefix web ci && npm --prefix adapter ci
+      - run: npm --prefix web audit && npm --prefix adapter audit
+      - run: python3 scripts/secret-scan.py
+  installation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y restic
+      - run: python3 deploy/build.py
+      - run: python3 scripts/test-installation.py
+      - run: python3 scripts/test-operator-cli.py

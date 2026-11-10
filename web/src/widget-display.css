@@ -1,0 +1,221 @@
+/* Embedded app framing only. The private website keeps its own surfaces. */
+.widget .widget-surface {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  max-height: var(--widget-limit, 450px);
+  transition: height 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  border: 1px solid var(--color-border-secondary, rgba(13, 13, 13, 0.1));
+  border-radius: 16px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: none;
+  overflow: clip;
+  --card-controls-offset: 48px;
+}
+:root[data-theme="dark"] .widget-surface {
+  border-color: var(--color-border-secondary, rgba(255, 255, 255, 0.12));
+}
+.widget-scroll {
+  max-height: 100%;
+  overflow: clip;
+  scrollbar-gutter: auto;
+}
+.widget-surface[data-display="fullscreen"] {
+  transition: none;
+  height: var(--widget-limit);
+  border: 0;
+  border-radius: 0;
+}
+.widget-surface[data-display="fullscreen"] .widget-scroll {
+  height: var(--widget-limit);
+  max-height: var(--widget-limit);
+  padding: var(--widget-safe-top, 0px) var(--widget-safe-right, 0px)
+    var(--widget-safe-bottom, 0px) var(--widget-safe-left, 0px);
+}
+.widget-surface[data-display="fullscreen"] .widget-scroll,
+.widget-surface[data-display="fallback"] .widget-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: auto;
+}
+.widget .widget-surface main {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+.widget .widget-surface .compact-widget {
+  border: 0;
+  border-radius: 0;
+  max-width: none;
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  padding: 0 8px 8px;
+  background: transparent;
+}
+.widget .widget-surface .animated-size {
+  overflow: visible;
+}
+.widget .widget-surface .compact-toolbar,
+.widget .widget-surface .project-toolbar {
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  min-height: 48px;
+  height: 48px;
+  margin: 0 -8px 4px;
+  padding: 4px 50px 4px 8px;
+  background: var(--paper);
+  box-shadow: none;
+  border: 0;
+}
+.widget .widget-surface[data-display="fullscreen"] .compact-toolbar,
+.widget .widget-surface[data-display="fullscreen"] .project-toolbar {
+  padding-right: 8px;
+}
+.widget .widget-surface .project-browser {
+  --card-controls-offset: 48px;
+}
+.widget .widget-surface .project-group .browse-toolbar {
+  position: static;
+}
+.widget .widget-surface .project-group .compact-widget {
+  padding: 0;
+}
+.widget .widget-surface .project-group .compact-toolbar {
+  position: static;
+  padding-right: 0;
+  min-height: 0;
+}
+.widget .widget-surface .scope-button {
+  white-space: nowrap;
+  min-width: 0;
+}
+.widget .widget-surface .compact-row {
+  background: var(--paper);
+}
+.widget .widget-surface .task-browser > .browse-toolbar {
+  margin-top: 0;
+}
+.widget .widget-surface .occurrence-manager {
+  max-height: none;
+  overflow: visible;
+}
+.widget .widget-expand {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  margin: 0;
+  color: var(--muted);
+  background: var(--paper);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.widget-expand svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.7;
+}
+.widget-expand:focus-visible,
+.widget-fade:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -3px;
+}
+.widget-expand:disabled {
+  cursor: wait;
+}
+.widget .widget-surface .widget-fade {
+  position: absolute;
+  z-index: 2;
+  bottom: 0;
+  inset-inline: 0;
+  width: 100%;
+  height: min(80px, 50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: linear-gradient(
+    to top,
+    var(--paper) 0%,
+    color-mix(in srgb, var(--paper) 90%, transparent) 60%,
+    transparent 100%
+  );
+  cursor: pointer;
+}
+.widget [data-preview-clipped] {
+  pointer-events: none !important;
+}
+.widget .widget-surface:has(.test-mode) .widget-expand {
+  top: 37px;
+}
+.widget .widget-surface .test-mode {
+  margin: 0;
+  min-height: 28px;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.widget .widget-surface:has(.test-mode),
+.widget .widget-surface:has(.test-mode) .project-browser {
+  --card-controls-offset: 76px;
+}
+.widget .widget-surface:has(.test-mode) .compact-toolbar,
+.widget .widget-surface:has(.test-mode) .project-toolbar { top: 28px; }
+.widget-surface[data-display="preview"] .inline-editor,
+.widget-surface[data-display="preview"] .project-editor {
+  pointer-events: none;
+}
+
+@media (pointer: coarse) {
+  .widget .widget-expand {
+    width: 44px;
+    height: 44px;
+    top: 2px;
+    right: 2px;
+  }
+  .widget .widget-surface:has(.test-mode) .widget-expand {
+    top: 30px;
+  }
+}
+
+.widget-surface[data-display="preview"] .inline-editor,
+.widget-surface[data-display="preview"] .project-editor,
+.widget-surface[data-display="preview"] .inline-panel:has(.occurrence-manager),
+.widget-surface[data-display="preview"]
+  .inline-panel:has(+ .inline-editor:not([hidden])) {
+  display: none;
+}
+
+.widget-fade > span {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--muted);
+  transition: color 120ms, background-color 120ms;
+}
+.widget .widget-surface .widget-fade:disabled { opacity: 1; }
+.widget-fade:disabled > span { opacity: .5; }
+.widget-fade:focus-visible > span { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-fade > span { transition: none; }
+  .widget .widget-surface { transition: none; }
+}

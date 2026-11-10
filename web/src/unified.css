@@ -1,0 +1,326 @@
+/* Shared workspace geometry; host-specific constraints stay at the boundary. */
+.app-navigation {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+}
+.app-navigation .scope-button {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.floating-panel [role="separator"] {
+  height: 1px;
+  margin: 5px 0;
+  background: var(--border);
+}
+.compact-shell > .gtd-sidebar {
+  display: none;
+}
+.gtd-sidebar[inert] nav {
+  overflow: hidden;
+}
+.compact-shell .gtd-content {
+  padding: 0;
+  max-width: none;
+}
+.compact-shell .gtd-content.with-inspector {
+  display: block;
+}
+.compact-shell .gtd-main,
+.compact-shell .task-column {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding: 0;
+}
+.compact-shell .task-column > .compact-widget {
+  width: 100%;
+}
+.compact-shell .gtd-topbar {
+  height: 48px;
+  padding: 4px 50px 4px 8px;
+}
+.compact-shell .gtd-topbar > div {
+  min-width: 0;
+}
+.compact-shell .gtd-topbar > div .icon-button {
+  display: inline-flex;
+}
+.compact-shell .workspace-list-heading h1 {
+  display: none;
+}
+.compact-shell .gtd-detail {
+  position: relative;
+  inset: auto;
+  height: auto;
+  width: auto;
+  margin: 0;
+  padding: 16px;
+}
+.compact-shell .capture-dock {
+  position: fixed;
+  bottom: 12px;
+}
+.compact-shell .project-toolbar-start {
+  gap: 4px;
+  min-width: 0;
+}
+.compact-shell .project-toolbar-start > .scope-button {
+  font-size: 12px;
+}
+html:has(body.widget),
+body.widget,
+body.widget #root {
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+body.widget {
+  background: transparent;
+}
+.widget .widget-surface[data-display="fullscreen"] {
+  --workspace-header-height: 48px;
+  --workspace-gutter: 24px;
+  --card-controls-offset: calc(var(--app-banner-height, 0px) + var(--workspace-header-height));
+}
+.widget .widget-surface[data-display="fullscreen"] .project-browser {
+  --card-controls-offset: inherit;
+}
+.widget .widget-surface[data-display="preview"] .gtd-detail,
+.widget .widget-surface[data-display="preview"] .capture-dock {
+  display: none;
+}
+.widget .widget-surface[data-display="fullscreen"] .gtd-shell {
+  min-height: calc(var(--widget-limit) - var(--app-banner-height, 0px) - var(--widget-safe-top, 0px) - var(--widget-safe-bottom, 0px));
+  height: auto;
+}
+.widget .widget-surface[data-display="fullscreen"] .gtd-main {
+  overflow: visible;
+  height: auto;
+  padding-top: 0;
+  overscroll-behavior: auto;
+}
+.widget .widget-surface[data-display="fullscreen"] .gtd-content {
+  padding: 16px 24px 96px;
+}
+.widget .widget-surface[data-display="fullscreen"] .task-column {
+  min-height: 0;
+}
+.widget .widget-surface[data-display="fullscreen"] .compact-widget {
+  padding: 0;
+}
+.widget .widget-surface[data-display="fullscreen"] .gtd-sidebar {
+  height: calc(var(--widget-limit) - var(--app-banner-height, 0px));
+  top: 0;
+}
+.widget .widget-surface[data-display="fullscreen"] .gtd-topbar,
+.widget .widget-surface[data-display="fullscreen"] .project-toolbar,
+.widget
+  .widget-surface[data-display="fullscreen"]
+  .task-browser
+  > .browse-toolbar {
+  position: sticky;
+  top: var(--app-banner-height, 0px);
+  z-index: 5;
+  background: var(--canvas);
+  box-sizing: border-box;
+  height: var(--workspace-header-height);
+  min-height: var(--workspace-header-height);
+}
+.widget .widget-surface:has(.test-mode) {
+  --app-banner-height: 28px;
+}
+.widget .widget-surface[data-display="fullscreen"] .browse-toolbar {
+  padding: 8px 0;
+  margin: 0 0 10px;
+}
+.widget .widget-surface[data-display="fullscreen"] .project-toolbar {
+  padding: 4px 0;
+  margin: 0;
+}
+/* Review has its own pinned page header; nested list toolbars must not stack
+   over it or cover the task controls below it. */
+.widget .widget-surface[data-display="fullscreen"] .review-browser .project-toolbar,
+.widget .widget-surface[data-display="fullscreen"] .review-browser .browse-toolbar {
+  position: static;
+}
+.widget
+  .widget-surface[data-display="fullscreen"]
+  .gtd-content:has(.project-browser) {
+  padding-top: 0;
+}
+.widget .widget-surface[data-display="fullscreen"] .gtd-detail {
+  top: var(--app-banner-height, 0px);
+  max-height: calc(var(--widget-limit) - var(--app-banner-height, 0px));
+}
+/* Task controls retain the opaque --paper surface from widget-display.css.
+   They remain sticky in fullscreen, so transparency here would let scrolling
+   descriptions paint through the title, completion control, and menu. */
+.widget .widget-surface .scope-button {
+  max-width: 100%;
+}
+@media (max-width: 760px) {
+  .widget .widget-surface[data-display="fullscreen"] {
+    --workspace-header-height: 60px;
+    --workspace-gutter: 20px;
+  }
+  .widget .widget-surface[data-display="fullscreen"] .gtd-content {
+    padding: 0 20px 96px;
+  }
+  /* Let the header surface reach both edges while its controls retain the
+     same inset as the list. Content cards keep their existing spacing. */
+  .widget .widget-surface[data-display="fullscreen"] .task-column > .task-browser > .browse-toolbar,
+  .widget .widget-surface[data-display="fullscreen"] .gtd-content > .project-browser > .project-toolbar {
+    margin-inline: calc(-1 * var(--workspace-gutter));
+    padding-inline: var(--workspace-gutter);
+  }
+  .widget .widget-surface[data-display="fullscreen"] .browse-toolbar .icon-button {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+  .widget .widget-surface[data-display="fullscreen"] .project-toolbar-start {
+    min-width: 0;
+    flex: 1;
+  }
+  .widget .widget-surface[data-display="fullscreen"] .project-toolbar .scope-button {
+    min-width: 0;
+  }
+  .widget .widget-surface[data-display="fullscreen"] .project-toolbar .scope-button > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .widget .widget-surface[data-display="fullscreen"] .project-toolbar .view-actions {
+    flex-shrink: 0;
+  }
+  .widget .widget-surface[data-display="fullscreen"] .gtd-detail {
+    height: calc(var(--widget-limit) - var(--app-banner-height, 0px));
+  }
+  .widget .widget-surface[data-display="fullscreen"] .gtd-topbar {
+    height: 60px;
+  }
+}
+
+/* ChatGPT may overlay its composer at the bottom of the expanded app. Keep
+   capture beside the top controls, using the same mounted form and draft. */
+.widget .widget-surface[data-display="fullscreen"] .capture-dock[data-placement="top"] {
+  top: calc(var(--widget-safe-top, 0px) + var(--app-banner-height, 0px) + var(--workspace-header-height) + 8px);
+  bottom: auto;
+  right: max(12px, var(--widget-safe-right, 0px));
+  max-height: calc(var(--widget-limit) - var(--workspace-header-height) - var(--app-banner-height, 0px) - 24px);
+  overflow-y: auto;
+}
+
+/* The mobile inspector is an opaque editing surface, not a card overlay. */
+.widget .widget-surface[data-display="fullscreen"] .gtd-detail {
+  padding: 16px 24px 32px;
+  overflow: auto;
+}
+@media (max-width: 1040px) {
+  .widget .widget-surface[data-display="fullscreen"] .gtd-detail {
+    background: var(--canvas);
+  }
+}
+.compact-shell .home-toolbar h1 { display: none; }
+.compact-shell .home-dashboard { padding: 0; }
+.compact-shell .workspace-list-heading { padding-right: 50px; }
+
+.preview-resume { display: none; }
+.widget-surface[data-display="preview"] .expanded-only { display: none; }
+.widget-surface[data-display="preview"] .preview-resume { display: inline-flex; }
+.compact-shell .home-browser .browse-toolbar { height: 48px; margin: 0; padding: 4px 50px 4px 8px; }
+.compact-shell .gtd-topbar { position: sticky; top: 0; }
+@media (max-width: 760px) {
+  .widget .widget-surface[data-display="fullscreen"] .compact-widget input:not([type="checkbox"]),
+  .widget .widget-surface[data-display="fullscreen"] .compact-widget textarea,
+  .widget .widget-surface[data-display="fullscreen"] .compact-widget select {
+    font-size: 16px;
+  }
+}
+
+.host-notice { display: flex; justify-content: flex-end; align-items: flex-start; gap: 8px; padding: 4px 56px 4px 12px; color: var(--error, #b93838); }
+.host-notice .icon-button { border: 0; background: transparent; padding: 6px; color: inherit; }
+.host-notice svg { width: 16px; height: 16px; }
+.host-notice [role="alert"] { flex: 1; font-size: 13px; }
+.host-notice p { margin: 6px 0; }
+.host-notice [role="alert"] > div { display: flex; gap: 8px; }
+
+/* Everyday compact views share the task toolbar's metrics and stacking. */
+.widget .compact-shell .gtd-topbar {
+  box-sizing: border-box;
+  position: sticky;
+  top: var(--app-banner-height, 0px);
+  z-index: 3;
+  margin: 0;
+  background: var(--paper);
+}
+.widget .widget-surface:has(.test-mode) { --app-banner-height: 28px; }
+.compact-shell .app-navigation button {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  margin: 0;
+}
+.compact-shell .app-navigation .scope-button { padding: 6px 8px; border-radius: 8px; }
+.compact-shell .app-navigation .icon-button { width: 30px; height: 30px; flex-basis: 30px; padding: 0; color: var(--muted); }
+.compact-shell .app-navigation .icon-button svg { width: 16px; height: 16px; }
+.compact-shell .gtd-topbar > div { font-size: 13px; }
+.widget .compact-shell .repeating-page,
+.widget .compact-shell .help-page,
+.widget .compact-shell .activity-page { padding: 12px 16px; }
+@media (pointer: coarse) {
+  .compact-shell .app-navigation .icon-button { width: 44px; height: 44px; flex-basis: 44px; }
+  .compact-shell .app-navigation .scope-button { min-height: 44px; }
+}
+
+.environment-ended { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 16px; font-size: 14px; }
+.widget .environment-ended { border: 1px solid var(--border); border-radius: 16px; background: var(--paper); }
+.environment-ended button { margin-left: auto; min-height: 36px; padding: 6px 10px; font: inherit; border-radius: 8px; }
+.environment-ended small { width: 100%; color: var(--muted); }
+.environment-locked { display: none; }
+
+.widget .compact-paged .compact-task:not([data-expanded]) .task-title > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.widget .compact-paged .task-title { position: relative; padding-right: 20px; }
+.widget .compact-paged .disclosure-chevron { position: absolute; top: 8px; right: 0; width: 14px; height: 14px; }
+.widget .compact-pagination {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  margin: 4px 0 0;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.widget .compact-pagination .icon-button { width: 30px; height: 30px; padding: 0; flex-basis: 30px; }
+.widget .compact-pagination .icon-button svg { width: 16px; height: 16px; }
+@media (pointer: coarse) {
+  .widget .compact-pagination { min-height: 44px; }
+  .widget .compact-pagination .icon-button { width: 44px; height: 44px; flex-basis: 44px; }
+}
+
+.widget .compact-shell .home-focus { padding: 8px; margin-bottom: 12px; }
+.widget .compact-shell .home-section { margin-bottom: 12px; }
+.widget .compact-shell .home-section-heading { margin-bottom: 4px; }
+.widget .compact-shell .home-section .compact-task { padding: 4px 8px; margin-bottom: 4px; }
+.widget .compact-shell .home-project-row { padding: 8px 10px; margin-bottom: 4px; min-height: 56px; border-radius: 12px; }
+.widget .compact-shell .home-focus .compact-task { padding: 4px 0; margin-bottom: 0; }
+.widget .compact-shell .featured-task .task-title { font-size: 16px; }
+.widget .compact-shell .project-toolbar .icon-button { width: 30px; height: 30px; flex-basis: 30px; }
+@media (pointer: coarse) {
+  .widget .compact-shell .project-toolbar .icon-button { width: 44px; height: 44px; flex-basis: 44px; }
+}

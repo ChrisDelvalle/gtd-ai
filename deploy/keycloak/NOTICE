@@ -1,0 +1,11 @@
+Keycloak offline resource-binding compatibility patch
+
+Derived from Keycloak 26.8.1 and upstream commit
+f8e6deabe95bc08109912cea3129ab1da6846ad2.
+Copyright Red Hat, Inc. and/or its affiliates and other contributors.
+Licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
+
+The patch and pinned build script remain separate from first-party AGPL code.
+The build verifies the upstream source, patch, compiler image, and unchanged JAR
+entries. It does not contact an identity server or use installation credentials.

@@ -1,0 +1,25 @@
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+# Exact locked chain: openidconnect 4.0.1 -> rsa 0.9.10 -> crypto-bigint 0.5.5.
+# GTD uses it only to verify public signatures; no RSA private operations.
+# See docs/dependency-review.md and the source/lockfile guard.
+ignore = [
+  { id = "RUSTSEC-2023-0071", reason = "Public-key verification only; GTD never signs/decrypts with the rsa crate" },
+  { id = "RUSTSEC-2026-0387", reason = "Transitive rsa verification uses public inputs, not secret-integer operations" },
+]
+
+[licenses]
+version = 2
+allow = ["AGPL-3.0-only", "MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "Unicode-3.0", "CDLA-Permissive-2.0"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
