@@ -61,7 +61,7 @@ postgres = { version = "=0.19.14", features = ["with-uuid-1"], optional = true }
 r2d2 = { version = "=0.8.10", optional = true }
 r2d2_postgres = { version = "=0.18.2", optional = true }
 jsonwebtoken = { version = "=11.1.0", default-features = false, features = ["aws_lc_rs", "use_pem"], optional = true }
-openidconnect = { version = "=4.0.1", default-features = false, features = ["reqwest-blocking", "rustls-tls", "timing-resistant-secret-traits"], optional = true }
+openidconnect = { version = "=4.1.0", default-features = false, features = ["reqwest-blocking", "rustls-tls", "timing-resistant-secret-traits"], optional = true }
 
 [dev-dependencies]
 tempfile = "3"
