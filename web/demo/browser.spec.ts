@@ -848,6 +848,13 @@ for (const width of [360, 768, 1280, 1920])
       await expect(page.locator(".expanded-frame")).toBeVisible();
       await page.screenshot({ path: info.outputPath("chat-split.png") });
       if (width > 800) {
+        await expect(page.locator(".user-message")).toHaveCSS(
+          "max-width",
+          "70%",
+        );
+        await expect(
+          page.locator(".has-viewer .chat-scroll").filter({ visible: true }),
+        ).toHaveCSS("padding", "20px");
         const divider = page.getByRole("separator", {
           name: "Resize chat and widget",
         });
