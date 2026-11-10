@@ -8,7 +8,7 @@
     "test": "node --experimental-transform-types --test mutations.test.ts coalesced-api.test.mjs environment-guard.test.mjs website-identity.test.mjs widget-identity.test.mjs && playwright test"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "@modelcontextprotocol/ext-apps": "2.0.4",
     "lucide-react": "1.49.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
