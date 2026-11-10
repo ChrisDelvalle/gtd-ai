@@ -33,7 +33,7 @@ test("public documentation uses only fresh fictional records",async({page,reques
   await page.screenshot({path:info.outputPath("home-phone.png")});
   await page.goto("/help");
   const source=page.getByRole("link",{name:"Source code",exact:true});
-  await expect(source).toHaveAttribute("href",/github.com\/ChrisDelvalle\/todo-mcp/);
+  await expect(source).toHaveAttribute("href",/github.com\/ChrisDelvalle\/gtd-ai/);
   await expect(page.getByRole("link",{name:"AGPL-3.0-only"})).toBeVisible();
 });
 

@@ -9,7 +9,7 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
 ARG GTD_SOURCE_REVISION=development
-ARG GTD_SOURCE_URL=https://github.com/ChrisDelvalle/todo-mcp
+ARG GTD_SOURCE_URL=https://github.com/ChrisDelvalle/gtd-ai
 ENV GTD_SOURCE_REVISION=${GTD_SOURCE_REVISION} GTD_SOURCE_URL=${GTD_SOURCE_URL}
 RUN GTD_REQUIRE_ACCOUNT_WIDGET=1 npm run build
 

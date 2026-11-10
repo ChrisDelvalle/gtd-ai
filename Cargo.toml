@@ -5,7 +5,7 @@ edition = "2024"
 rust-version = "1.93"
 description = "A self-hosted GTD task system for people and AI assistants"
 license = "AGPL-3.0-only"
-repository = "https://github.com/ChrisDelvalle/todo-mcp"
+repository = "https://github.com/ChrisDelvalle/gtd-ai"
 default-run = "todo-mcp"
 
 [[bin]]

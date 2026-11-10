@@ -9,8 +9,8 @@ PostgreSQL; the local SQLite preview is not this installation path.
 ## 1. Build from source
 
 ```sh
-git clone https://github.com/ChrisDelvalle/todo-mcp.git
-cd todo-mcp
+git clone https://github.com/ChrisDelvalle/gtd-ai.git
+cd gtd-ai
 python3 deploy/build.py
 ```
 

@@ -12,7 +12,7 @@ await writeFile(
   "dist/widget-probe.html",
   await readFile("src/widget-probe.html", "utf8"),
 );
-const sourceURL = process.env.GTD_SOURCE_URL || "https://github.com/ChrisDelvalle/todo-mcp";
+const sourceURL = process.env.GTD_SOURCE_URL || "https://github.com/ChrisDelvalle/gtd-ai";
 const parsedSource = new URL(sourceURL);
 if (parsedSource.protocol !== "https:" || parsedSource.username || parsedSource.password)
   throw Error("GTD_SOURCE_URL must be a public HTTPS source URL");

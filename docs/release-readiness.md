@@ -21,7 +21,7 @@ source, not the former operational workspace or release archives.
 | Documented operator CLI on Linux | Prepare, bootstrap, backup and isolated restore passed; repeated restore refused; public ingress never started |
 | Dependencies and licenses | npm audit clean; Cargo advisory/license checks pass with the two narrow exceptions below; both JavaScript lockfiles checked |
 | Source export and history | Structural, local documentation-link, secret and separate privacy checks passed |
-| Public screenshots | Five focused crops of fictional demo content inspected; source PDFs excluded; no identifying image metadata |
+| Public screenshots | Five demo images and one user-approved ChatGPT capture inspected; source PDFs excluded; identifying metadata removed |
 
 The browser matrix covers phone and wide desktop, sidebar states, themes,
 embedded/expanded widgets, drafts, conflicts, pagination, account boundaries,
@@ -34,7 +34,7 @@ refreshes concealing conflicts while an editor remained open. Browser fixtures n
 use the current composed Home and app-only contracts, select their own records,
 and wait for write acknowledgements when checking authoritative state.
 
-[Deterministic CI](https://github.com/ChrisDelvalle/todo-mcp/actions/workflows/ci.yml)
+[Deterministic CI](https://github.com/ChrisDelvalle/gtd-ai/actions/workflows/ci.yml)
 repeats source, dependency/history, browser and full Linux installation checks.
 It has read-only default permissions, pinned actions, disposable credentials,
 and no deployment or live-model steps. Dependency update proposals require review;

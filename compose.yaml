@@ -8,7 +8,7 @@ services:
       dockerfile: deploy/multi-user/Dockerfile
       args: &source
         GTD_SOURCE_REVISION: ${GTD_SOURCE_REVISION:-development}
-        GTD_SOURCE_URL: ${GTD_SOURCE_URL:-https://github.com/ChrisDelvalle/todo-mcp}
+        GTD_SOURCE_URL: ${GTD_SOURCE_URL:-https://github.com/ChrisDelvalle/gtd-ai}
       target: service
   adapter:
     image: gtd-adapter:${GTD_VERSION:-0.20.0}

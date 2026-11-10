@@ -24,6 +24,15 @@ Claude. Both use the same tasks and projects, with a separate account for each u
 
 ## Features
 
+### Work in ChatGPT and Claude
+
+The full task workflow is available through the website, MCP tools, and
+interactive cards in ChatGPT and Claude. Browse projects, plan work, edit tasks,
+and review progress right in the conversation, then pick up the same tasks on the
+web whenever you like.
+
+![Managing a GTD project through an interactive task widget in ChatGPT](docs/images/chatgpt-widget.png)
+
 ### Priorities
 
 See urgency and importance together. Tasks inherit priority from the work they
