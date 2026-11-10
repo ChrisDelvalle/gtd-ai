@@ -1,6 +1,6 @@
 # Task priority, project fallbacks, and sorting
 
-Status: **Approved for implementation.**
+Status: **Implemented and deployed November 10, 2026.**
 
 Release decisions: defer project importance; retain strongest-whole dependency
 ranking; add Planned today to existing task filters. See the
@@ -8,11 +8,11 @@ ranking; add Planned today to existing task filters. See the
 
 Date: November 10, 2026. Implementation inspected at `7068d84`.
 
-This document proposes how GTD AI should use project information, deadlines,
-planned work, and dependencies to surface useful tasks. It also covers the
-controls for exploring those tasks on the website and in widgets. Implementation
-planning follows review of these decisions; this document does not authorize a
-release or change the running service.
+This document records the design of project information, deadlines, planned work,
+and dependency priority in GTD AI, including the controls on the website and in
+widgets. Proposed future additions are identified separately. See the
+[acceptance report](priority-release-acceptance.md) for the implemented scope,
+verification and release evidence.
 
 ## 1. Product intent
 
@@ -67,9 +67,10 @@ Project importance needs a separate, explicit inheritance setting. Section 5
 describes that addition and its costs; it must not be smuggled in by reinterpreting
 existing Normal values.
 
-## 2. What the implementation does today
+## 2. Baseline behavior before this release
 
-These are observed behaviors, not proposed promises.
+These are the observed behaviors at the inspected baseline, before this design
+was implemented.
 
 | Area | Current behavior | Consequence |
 | --- | --- | --- |

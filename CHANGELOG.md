@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-10 — priority and ordering
+
+- Use an active project's deadline when a committed task has no deadline of its own.
+- Balance importance with bounded deadline urgency and retain complete,
+  deterministic ordering through dependency chains.
+- Add timing filters and sorted task lists to Priorities, visible list sort
+  controls, deadline-source labels, and Planned today.
+- Keep the website, widgets, and interactive demos on the same priority rules.
+- Preserve warm views during refresh and keep narrow, wrapped widget controls
+  usable while scrolling.
+
 ## Unreleased — open-source preparation
 
 - Separate reusable source from installation-specific operations and evidence.
