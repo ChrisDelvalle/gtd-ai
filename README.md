@@ -113,9 +113,22 @@ flowchart LR
     R --> S[Meilisearch]
 ```
 
-The website and widget share React components. Rust owns task behavior,
-transactions, account isolation, and authorization. Keycloak owns sign-in and
-OAuth. Internal services listen on loopback; Caddy exposes only intended routes.
+The website and the cards inside ChatGPT and Claude use the same React interface.
+Both talk to a Rust service that manages tasks, projects, scheduling, and change
+history. A Node.js adapter connects MCP clients to that service, so an assistant
+changing a task goes through the same business rules as a person using the
+interface.
+
+PostgreSQL stores tasks, projects, and their history. Account boundaries are
+enforced in the application and through PostgreSQL's row-level security policies.
+Meilisearch maintains a separate search index, which can be rebuilt from the
+database without affecting the underlying records.
+
+Keycloak handles passwords, sign-in, and OAuth connections. Caddy provides the
+HTTPS entry point and routes requests to the website, identity provider, or MCP
+adapter. The databases and internal service ports stay on the server's loopback
+interface, reachable only from that server. Docker Compose runs the services
+together; the installation tooling generates their configuration and credentials.
 
 ## Contributing and License
 
