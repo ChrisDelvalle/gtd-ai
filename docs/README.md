@@ -8,3 +8,7 @@
 - [Security](security.md): trust boundaries and privacy expectations.
 - [Operations](operations.md): backup, recovery, upgrade, and rollback.
 - [Release readiness](release-readiness.md): evidence and outstanding checks.
+
+## Design proposals
+
+- [Task priority, project fallbacks, and sorting](design/task-priority-and-project-fallbacks.md): draft policy and interaction design for review; not implemented.
