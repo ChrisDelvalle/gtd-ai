@@ -280,6 +280,7 @@ export function PriorityChart({
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState("");
   const [cellError, setCellError] = useState("");
+  const recoveredSnapshot = useRef<string | null>(null);
   const [paging, setPaging] = useState(false);
   const [focus, setFocus] = useState(-1);
   const view = saved?.project === project.id ? saved : null;
@@ -398,7 +399,11 @@ export function PriorityChart({
       .catch((error) => {
         if (active) {
           setCellError(errorText(error));
-          if (error instanceof ApiError && error.code === "reset_required" && !pending) setAttempt(n => n+1);
+          if (error instanceof ApiError && error.code === "reset_required" && !pending && recoveredSnapshot.current !== target.summary.snapshot) {
+            recoveredSnapshot.current = target.summary.snapshot;
+            api.invalidateReads?.();
+            setAttempt(n => n+1);
+          }
         }
       });
     return () => {
@@ -443,6 +448,8 @@ export function PriorityChart({
         ?.focus({ preventScroll: true });
   }
   function retry() {
+    recoveredSnapshot.current = null;
+    api.invalidateReads?.();
     setCellError("");
     setAttempt((n) => n + 1);
   }

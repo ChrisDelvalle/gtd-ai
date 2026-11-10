@@ -831,9 +831,17 @@ for (const width of [390, 1440]) {
     await expect(
       page.getByRole("button", { name: "Send prepared example" }),
     ).toBeDisabled();
-    await expect(frame.getByRole("button", { name: /^Details:/ })).toHaveCount(
-      2,
-    );
+    // Compact cards remove controls below their clip boundary from the
+    // accessibility tree. The open first task can legitimately hide row two;
+    // verify retained membership, then accessible membership after expanding.
+    await expect(frame.locator('[aria-label="Request results"] article')).toHaveCount(2);
+    await expect(frame.getByRole("button", {
+      name: "Details: Confirm Tuesday's pickup adult with the school office", exact: true,
+    })).toHaveAttribute("aria-expanded", "true");
+    await frame.getByRole("button", { name: "Expand view", exact: true }).click();
+    await expandedAtRest(page);
+    await expect(frame.getByRole("button", { name: /^Details:/ })).toHaveCount(2);
+    await page.getByRole("button", { name: "Close expanded view" }).click();
     await page
       .getByRole("banner")
       .getByRole("button", { name: "Reset demo", exact: true })

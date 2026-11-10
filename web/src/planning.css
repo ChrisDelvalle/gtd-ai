@@ -180,6 +180,10 @@
   .compact-widget .date-chip {
     display: none;
   }
+  .compact-widget[data-sort="effective_due"] .date-chip,
+  .compact-widget[data-sort="due"] .date-chip {
+    display: flex;
+  }
 }
 .metadata-row[data-kind="deadline"] {
   --deadline-color: #a13735;
@@ -383,4 +387,23 @@
 .work-block-heading svg {
   width: 16px;
   height: 16px;
+}
+/* Sorting stays readable when navigation and actions exhaust a narrow row. */
+.task-browser[data-sort] > .browse-toolbar {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.task-browser[data-sort] > .browse-toolbar > .view-actions {
+  margin-inline-start: auto;
+}
+.widget .widget-surface[data-display="fullscreen"] .task-browser[data-sort] > .browse-toolbar {
+  height: auto;
+}
+.compact-widget[data-sort] > .compact-toolbar .list-controls,
+.compact-widget[data-sort] > .compact-toolbar .page-actions {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.widget .widget-surface .compact-widget[data-sort] > .compact-toolbar {
+  height: auto;
 }

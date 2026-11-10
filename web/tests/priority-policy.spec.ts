@@ -42,6 +42,15 @@ for (const width of [320, 390, 1280]) test(`project fallback and sorted frozen c
   await expect(page.getByRole("button",{name:"Sort: Deadline",exact:true})).toBeVisible();
   await expect(page.locator(".task-title > span:first-child")).toHaveText([first.title,second.title,explicit.title]);
   await expect(page.locator(".date-chip-source")).toHaveCount(2);
+  await expect(page.locator(".date-chip-source").first()).toBeVisible();
+  const sort=page.getByRole("button",{name:"Sort: Deadline",exact:true});
+  const text=(await sort.locator("span").boundingBox())!, arrow=(await sort.locator("svg").boundingBox())!;
+  expect(Math.abs(text.y+text.height/2-arrow.y-arrow.height/2)).toBeLessThan(1);
+  expect(arrow.x).toBeGreaterThan(text.x+text.width);
+  const heading=(await page.locator(".workspace-list-heading").boundingBox())!;
+  const order=(await sort.boundingBox())!;
+  expect(order.y >= heading.y + heading.height || order.x >= heading.x + heading.width + 8).toBeTruthy();
+  expect(await page.locator(".browse-toolbar").evaluate(el => el.scrollWidth <= el.clientWidth)).toBeTruthy();
   await page.screenshot({path:info.outputPath(`deadline-list-${width}.png`)});
 });
 
@@ -64,4 +73,37 @@ test("Planned today follows the account day with the filter panel closed", async
   await expect.poll(() => planned.at(-1)?.planned_from).toBe("2026-11-10");
   expect(planned.at(-1)?.exclude_statuses).toContain("done");
   expect(planned.at(-1)?.archived).toBe(false);
+});
+
+test("expired priority snapshots recover once and preserve the visible list on repeated failure", async ({page, request, baseURL}) => {
+  const response = await request.post("/api/tools/capture_item", {data:{request_id:randomUUID(), title:"Snapshot recovery fixture", brief:"Keep this row visible.", status:"next", importance:"critical", estimated_minutes:10, effort:"low", due_date:"2000-01-01", reason:"Disposable recovery check"}, headers:{Origin:baseURL!,"X-GTD-Request":"1"}});
+  expect(response.ok(), await response.text()).toBeTruthy();
+  await page.goto("/");
+  await page.getByRole("button",{name:/^Chart:/}).click();
+  await page.getByRole("menuitemradio",{name:"Priorities",exact:true}).click();
+  await page.getByRole("button",{name:/^Critical, Overdue:/}).click();
+  const dialog=page.getByRole("dialog");
+  await expect(dialog.getByRole("button",{name:"Snapshot recovery fixture",exact:true})).toBeVisible();
+  let failures=0, summaryReads=0;
+  await page.route("**/api/tools/priority_grid", async route => {
+    if(route.request().postDataJSON().cell) {
+      failures++;
+      return route.fulfill({status:409,json:{code:"reset_required",message:"Snapshot expired"}});
+    }
+    summaryReads++;
+    return route.continue();
+  });
+  await dialog.getByRole("button",{name:"Sort: Recommended"}).click();
+  await page.getByRole("menuitemradio",{name:"Newest first",exact:true}).click();
+  await expect(dialog.getByRole("button",{name:"Retry",exact:true})).toBeVisible();
+  await expect.poll(()=>summaryReads).toBe(1);
+  await expect.poll(()=>failures).toBeGreaterThanOrEqual(2);
+  await page.waitForTimeout(300);
+  expect(summaryReads).toBe(1);
+  expect(failures).toBeLessThanOrEqual(3);
+  await expect(dialog.getByRole("button",{name:"Snapshot recovery fixture",exact:true})).toBeVisible();
+  await page.unroute("**/api/tools/priority_grid");
+  await dialog.getByRole("button",{name:"Retry",exact:true}).click();
+  await expect(dialog.getByRole("button",{name:"Sort: Newest first",exact:true})).toBeVisible();
+  await expect(dialog.getByRole("button",{name:"Retry",exact:true})).toHaveCount(0);
 });

@@ -812,6 +812,7 @@ export function TaskList({
     <section
       ref={scrollAnchor.root}
       className={`${compact ? "compact-widget" : "task-browser compact-widget"}${previewPaging ? " compact-paged" : ""}`}
+      data-sort={appliedSort}
       aria-label="Task list"
       aria-busy={busy}
       data-build={compact ? BUILD : undefined}

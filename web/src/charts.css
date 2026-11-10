@@ -260,7 +260,8 @@ body:not(.widget) .priority-sheet-panel {
   margin-bottom: 0.55rem;
   flex-wrap: wrap;
 }
-.charts .chart-selector {
+.chart-selector,
+.compact-widget .chart-selector {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
