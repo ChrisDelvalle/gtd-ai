@@ -176,27 +176,30 @@
     display: none;
   }
 }
-@container task-header (max-width: 280px) {
-  .compact-widget .date-chip {
+@container task-header (max-width: 340px) {
+  .date-chip-year {
+    display: block;
+  }
+  .date-chip-comma {
     display: none;
   }
-  .compact-widget[data-sort="effective_due"] .date-chip,
-  .compact-widget[data-sort="due"] .date-chip {
-    display: flex;
-  }
 }
-.metadata-row[data-kind="deadline"] {
+.metadata-row[data-kind="deadline"],
+.date-chip {
   --deadline-color: #a13735;
+}
+.compact-widget .date-chip[data-overdue] {
+  color: var(--deadline-color);
 }
 .metadata-row[data-kind="deadline"] .metadata-badge {
   color: var(--deadline-color);
   background: color-mix(in srgb, var(--deadline-color) 10%, var(--paper));
 }
-:root[data-theme="dark"] .metadata-row[data-kind="deadline"] {
+:root[data-theme="dark"] :is(.metadata-row[data-kind="deadline"], .date-chip) {
   --deadline-color: #f0aaa2;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .metadata-row[data-kind="deadline"] {
+  :root:not([data-theme="light"]) :is(.metadata-row[data-kind="deadline"], .date-chip) {
     --deadline-color: #f0aaa2;
   }
 }

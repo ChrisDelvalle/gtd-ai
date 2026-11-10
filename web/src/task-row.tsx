@@ -1,11 +1,7 @@
 import type { TaskPreparation } from "./task-preparation";
 import { useViewState, useViewRef } from "./view-state";
-import {
-  nowMoment,
-  clockLabel,
-  momentLabel,
-  shortTimezone,
-} from "./planning-fields";
+import { nowMoment } from "./planning-fields";
+import { TaskDeadline } from "./deadline-chip";
 import { OccurrenceDetails } from "./occurrence-details";
 import { OccurrenceManager } from "./lazy-recurrence";
 import {
@@ -30,7 +26,6 @@ import {
   X,
   ChevronLeft,
   ChevronDown,
-  CalendarDays,
   AlignLeft,
   AlertCircle,
   LoaderCircle,
@@ -76,13 +71,6 @@ export function IconButton({
       {children}
     </button>
   );
-}
-function shortDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T12:00:00Z`));
 }
 export function TaskRow({
   task: supplied,
@@ -370,42 +358,7 @@ export function TaskRow({
             )}
           </span>
         )}
-        {!task.due_date && task.recommendation?.effective_deadline && task.recommendation.deadline_project && (
-          <span className="date-chip" title={`Project deadline · ${task.recommendation.deadline_project.title}: ${momentLabel(task.recommendation.effective_deadline)}`}>
-            <CalendarDays /><span>{shortDate(task.recommendation.effective_deadline.date)}<small className="date-chip-source">Project</small></span>
-          </span>
-        )}
-        {task.due_date && inlineDetails ? (
-          <span
-            className="date-chip"
-            title={`Deadline: ${task.deadline_time ? momentLabel({ date: task.due_date, ...task.deadline_time }) : shortDate(task.due_date)}`}
-          >
-            <CalendarDays />
-            <span>
-              {shortDate(task.due_date)}
-              {task.deadline_time && (
-                <span className="date-chip-time">{` · ${clockLabel(task.deadline_time.time)} ${shortTimezone({ date: task.due_date, ...task.deadline_time })}`}</span>
-              )}
-            </span>
-          </span>
-        ) : (
-          task.due_date && (
-            <button
-              className="date-chip"
-              title={`Deadline: ${task.deadline_time ? momentLabel({ date: task.due_date, ...task.deadline_time }) : shortDate(task.due_date)}`}
-              aria-label={`Edit due date: ${task.due_date}`}
-              onClick={() => open("edit")}
-            >
-              <CalendarDays />
-              <span>
-                {shortDate(task.due_date)}
-                {task.deadline_time && (
-                  <span className="date-chip-time">{` · ${clockLabel(task.deadline_time.time)} ${shortTimezone({ date: task.due_date, ...task.deadline_time })}`}</span>
-                )}
-              </span>
-            </button>
-          )
-        )}
+        <TaskDeadline task={task} onEdit={inlineDetails ? undefined : () => open("edit")} />
         <button
           type="button"
           className="icon-button"

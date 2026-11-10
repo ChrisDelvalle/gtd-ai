@@ -24,6 +24,10 @@ Links can point to relevant documents or calendar events.
 | Recurrence schedule | When an occurrence belongs; occurrences keep their own identities. |
 
 Date-only deadlines last through the end of their day in the saved timezone.
+Task rows show the year whenever it differs from the current year in your account
+timezone. Overdue unfinished tasks have a red date and, where space permits, an
+alert icon. Completed and archived dates stay neutral. Narrow rows retain the
+date and year, dropping the time and icon first.
 Changing your default timezone does not silently move an existing recurring
 schedule. Estimates describe remaining work; effort expresses the kind of energy
 it needs. Marking started records progress, not completion.

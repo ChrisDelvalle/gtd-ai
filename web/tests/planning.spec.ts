@@ -206,12 +206,9 @@ for (const width of [320, 390, 900])
     }
     expect(projectBox.y + projectBox.height).toBeLessThanOrEqual(notesBox.y);
     await expect(frame.locator(".task-title").first()).toBeVisible();
-    if (width === 320) await expect(frame.locator(".date-chip")).toBeHidden();
-    else {
-      await expect(frame.locator(".date-chip")).toBeVisible();
-      if (width === 390) await expect(frame.locator(".date-chip-time")).toBeHidden();
-      else await expect(frame.locator(".date-chip-time")).toBeVisible();
-    }
+    await expect(frame.locator(".date-chip")).toBeVisible();
+    if (width <= 390) await expect(frame.locator(".date-chip-time")).toBeHidden();
+    else await expect(frame.locator(".date-chip-time")).toBeVisible();
     await frame.locator(".importance-badge").scrollIntoViewIfNeeded();
     const deadline = frame.locator(".metadata-row").filter({ hasText: "Deadline:" });
     await expect(deadline.locator(".metadata-date")).toHaveText("Apr 16, 2027");

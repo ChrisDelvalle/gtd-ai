@@ -20,6 +20,7 @@ export type HostOptions = {
   project?: boolean;
   taskProject?: boolean;
   projectName?: string;
+  tasks?: Task[];
 };
 type Rpc = { method: string; params?: any };
 export const title = "Review the supporting material";
@@ -37,7 +38,7 @@ export async function openWidget(page: Page, options: HostOptions = {}) {
     html = html.replace("<html", '<html data-account-required="true"');
     options.environment ??= "staging";
   }
-  const tasks: Task[] = options.empty
+  const tasks: Task[] = options.tasks ?? (options.empty
     ? []
     : Array.from({ length: options.long === false ? 1 : 5 }, (_, i) => ({
         id: `display-task-${i + 1}`,
@@ -60,7 +61,7 @@ export async function openWidget(page: Page, options: HostOptions = {}) {
         last_change_id: i + 1,
         deleted: false,
         ...(options.project || options.taskProject ? { project_id: "display-project" } : {}),
-      }));
+      })));
   const project: Task & { task_counts: { next: number } } = {
     id: "display-project",
     title: options.projectName ?? projectTitle,
