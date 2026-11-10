@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "now": "2026-11-06T18:00:00.000Z",
+  "timezone": "America/New_York",
+  "records": [
+    "records-01.json",
+    "records-02.json",
+    "records-03.json",
+    "records-04.json",
+    "records-05.json"
+  ],
+  "changes": [
+    "changes-01.json",
+    "changes-02.json",
+    "changes-03.json",
+    "changes-04.json",
+    "changes-05.json",
+    "changes-06.json"
+  ]
+}
