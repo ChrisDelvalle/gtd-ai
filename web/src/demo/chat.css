@@ -179,11 +179,16 @@ button svg {
   display: none;
 }
 .conversation-area {
+  --composer-height: 94px;
+  --composer-bottom: 20px;
   margin-left: 52px;
   height: 100dvh;
   position: relative;
   display: flex;
   flex-direction: column;
+}
+.conversation-area:has(.chat-composer.is-empty) {
+  --composer-height: 52px;
 }
 .chat-topbar {
   height: 52px;
@@ -209,10 +214,15 @@ button svg {
 }
 .chat-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 20px 24px 24px;
+  padding: 20px 24px
+    calc(
+      var(--composer-height) + var(--composer-bottom) +
+        env(safe-area-inset-bottom, 0px) + 24px
+    );
 }
 .chat-scroll[hidden] {
   display: none;
@@ -383,19 +393,29 @@ button svg {
   background: transparent;
 }
 .composer-dock {
-  flex: none;
-  padding: 16px 24px 20px;
-  background: var(--chat-bg);
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 6;
+  padding: 16px 24px
+    calc(var(--composer-bottom) + env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
 }
 .chat-composer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
   max-width: 768px;
   margin: 0 auto;
-  padding: 12px 16px 10px;
+  padding: 8px 8px 8px 16px;
   background: var(--chat-surface);
   border: 0;
   border-radius: 28px;
+  pointer-events: auto;
 }
 .chat-composer textarea {
+  flex: 1;
+  min-width: 0;
   display: block;
   width: 100%;
   resize: none;
@@ -409,10 +429,10 @@ button svg {
   max-height: 144px;
 }
 .composer-actions {
+  flex: none;
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  margin-top: 6px;
 }
 .composer-actions button {
   background: var(--chat-text);
@@ -427,13 +447,19 @@ button svg {
   opacity: 0.35;
 }
 .has-viewer .conversation-area {
+  --composer-bottom: 24px;
   width: calc(var(--viewer-left) - 52px);
 }
 .has-viewer .chat-scroll {
-  padding: 20px;
+  padding: 20px 20px
+    calc(
+      var(--composer-height) + var(--composer-bottom) +
+        env(safe-area-inset-bottom, 0px) + 20px
+    );
 }
 .has-viewer .composer-dock {
-  padding: 12px 20px 24px;
+  padding: 12px 20px
+    calc(var(--composer-bottom) + env(safe-area-inset-bottom, 0px));
 }
 .viewer-toolbar {
   position: fixed;
@@ -500,6 +526,9 @@ button svg {
   }
 }
 @media (max-width: 999px) {
+  .conversation-area {
+    --composer-bottom: 16px;
+  }
   .chat-sidebar {
     width: 275px;
   }
@@ -515,10 +544,15 @@ button svg {
     font-size: 24px;
   }
   .chat-scroll {
-    padding: 20px 16px;
+    padding: 20px 16px
+      calc(
+        var(--composer-height) + var(--composer-bottom) +
+          env(safe-area-inset-bottom, 0px) + 20px
+      );
   }
   .composer-dock {
-    padding: 12px 16px 16px;
+    padding: 12px 16px
+      calc(var(--composer-bottom) + env(safe-area-inset-bottom, 0px));
   }
 }
 @media (max-width: 800px) {
@@ -530,7 +564,13 @@ button svg {
     bottom: auto;
     background: none;
   }
+  .sidebar-open .chat-rail {
+    height: 100dvh;
+    bottom: 0;
+    background: var(--chat-bg);
+  }
   .conversation-area {
+    --composer-bottom: 12px;
     margin-left: 0;
   }
   .chat-topbar {
@@ -551,17 +591,18 @@ button svg {
   }
   .chat-scroll {
     scrollbar-gutter: auto;
-    padding: 12px 16px 16px;
+    padding: 12px 16px
+      calc(
+        var(--composer-height) + var(--composer-bottom) +
+          env(safe-area-inset-bottom, 0px) + 16px
+      );
   }
   .user-message {
     max-width: 85%;
   }
   .composer-dock {
-    padding: 10px 12px 12px;
-  }
-  .chat-composer {
-    padding: 12px 14px 9px;
-    border-radius: 26px;
+    padding: 10px 12px
+      calc(var(--composer-bottom) + env(safe-area-inset-bottom, 0px));
   }
   .has-viewer .conversation-area {
     width: 100%;
@@ -693,22 +734,9 @@ button svg {
 .viewer-resizing iframe {
   pointer-events: none;
 }
-@media (min-width: 801px) {
-  .chat-composer.is-empty {
-    min-height: 52px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 8px 8px 16px;
-  }
-  .chat-composer.is-empty textarea {
-    flex: 1;
-    height: 36px;
-    padding: 5px 0;
-  }
-  .chat-composer.is-empty .composer-actions {
-    margin: 0;
-  }
+.chat-composer.is-empty textarea {
+  height: 36px;
+  padding: 5px 0;
 }
 @media (min-width: 801px) and (max-width: 1099px) {
   .chat-thread,

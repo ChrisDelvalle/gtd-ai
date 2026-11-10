@@ -854,7 +854,15 @@ for (const width of [360, 768, 1280, 1920])
         );
         await expect(
           page.locator(".has-viewer .chat-scroll").filter({ visible: true }),
-        ).toHaveCSS("padding", "20px");
+        ).toHaveCSS("padding-left", "20px");
+        await expect(page.locator(".composer-dock")).toHaveCSS(
+          "background-color",
+          "rgba(0, 0, 0, 0)",
+        );
+        await expect(page.locator(".chat-composer")).toHaveCSS(
+          "height",
+          "52px",
+        );
         const divider = page.getByRole("separator", {
           name: "Resize chat and widget",
         });
@@ -925,3 +933,114 @@ test("local working sequence and copy actions", async ({ page }) => {
     "**I’d refill Nico’s folder.**",
   );
 });
+
+for (const [width, height] of [
+  [360, 640],
+  [390, 660],
+  [390, 844],
+  [800, 900],
+  [801, 900],
+  [999, 800],
+  [1000, 800],
+  [1440, 1000],
+])
+  for (const theme of ["dark", "light"]) {
+    test(`floating composer and solid drawer ${width}x${height} ${theme}`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize({ width, height });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(`${base}/chat/#capture`);
+      if (theme === "light")
+        await page.getByRole("button", { name: "Use light theme" }).click();
+      if (width >= 1000)
+        await page
+          .getByRole("button", { name: "Close sidebar", exact: true })
+          .click();
+      const composer = page.locator(".chat-composer");
+      const send = page.getByRole("button", { name: "Send prepared example" });
+      const input = page.getByLabel("Prepared example prompt");
+      const form = (await composer.boundingBox())!,
+        button = (await send.boundingBox())!,
+        text = (await input.boundingBox())!;
+      expect
+        .soft(Math.abs(button.y + button.height / 2 - form.y - form.height / 2))
+        .toBeLessThan(1);
+      expect.soft(button.x).toBeGreaterThanOrEqual(text.x + text.width);
+      expect.soft(form.height).toBeLessThanOrEqual(96);
+      await page.screenshot({ path: info.outputPath("filled-composer.png") });
+      await send.click();
+      await expect(
+        page.getByRole("button", { name: "Copy response", exact: true }),
+      ).toBeVisible();
+      await expect.soft(composer).toHaveCSS("height", "52px");
+      await expect
+        .soft(page.locator(".composer-dock"))
+        .toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      const scroll = page.locator(".chat-scroll:not([hidden])");
+      const geometry = await scroll.evaluate((el) => ({
+        bottom: el.getBoundingClientRect().bottom,
+        viewport: innerHeight,
+      }));
+      expect
+        .soft(Math.abs(geometry.bottom - geometry.viewport))
+        .toBeLessThan(1);
+      // The area beside the pill belongs to the chat, not an invisible dock.
+      expect
+        .soft(
+          await page.locator(".composer-dock").evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            return !!document
+              .elementFromPoint(r.left + 3, r.bottom - 3)
+              ?.closest(".chat-scroll");
+          }),
+        )
+        .toBe(true);
+      await scroll.evaluate((el) => {
+        el.scrollTop = 0;
+      });
+      await page.screenshot({
+        path: info.outputPath("composer-over-chat.png"),
+      });
+      await scroll.evaluate((el) => {
+        el.scrollTop = el.scrollHeight;
+      });
+      const reply = (await page
+        .getByRole("button", { name: "Copy response", exact: true })
+        .boundingBox())!;
+      expect(reply.y + reply.height).toBeLessThanOrEqual(
+        (await composer.boundingBox())!.y,
+      );
+      await page.screenshot({
+        path: info.outputPath("empty-floating-composer.png"),
+      });
+      await page
+        .getByRole("button", { name: "Open sidebar", exact: true })
+        .click();
+      if (width <= 800) {
+        const rail = page.locator(".chat-rail");
+        expect.soft((await rail.boundingBox())!.height).toBe(height);
+        expect
+          .soft(
+            await rail.evaluate((el) => getComputedStyle(el).backgroundColor),
+          )
+          .not.toBe("rgba(0, 0, 0, 0)");
+        expect
+          .soft(
+            await page.evaluate(
+              () =>
+                document
+                  .elementFromPoint(25, innerHeight - 30)
+                  ?.closest(".chat-rail") !== null,
+            ),
+          )
+          .toBe(true);
+      }
+      await page.screenshot({ path: info.outputPath("solid-drawer.png") });
+      await page
+        .locator(".chat-rail")
+        .getByRole("button", { name: "Close sidebar", exact: true })
+        .click();
+      await expect(composer).toBeVisible();
+    });
+  }
