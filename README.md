@@ -36,6 +36,12 @@ assistant combines the relevant fields to find work that fits the situation.
 It builds and maintains that structure from your conversations, so you get the
 benefit without taking on another job organizing the data.
 
+GTD puts those details to work even when you aren't asking a question. Its
+recommendation algorithm weighs importance, timing, and dependencies to bring
+the most pressing available work to the top. As deadlines approach and blockers
+clear, the order adapts, so you can see what deserves attention now without
+manually rearranging your list.
+
 GTD works best with a persistent, proactive assistant such as **ChatGPT Dot**
 that remembers how you like to work and can perform regular reviews and
 maintenance. With access to your email, calendar, and other sources of commitments,

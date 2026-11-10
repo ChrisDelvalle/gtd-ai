@@ -29,6 +29,7 @@ export default defineConfig({
       },
   use: {
     baseURL,
+    trace: process.env.CI ? "retain-on-failure" : "off",
     browserName: process.env.GTD_TEST_BROWSER === "webkit" ? "webkit" : "chromium",
     viewport: { width: 1440, height: 1000 },
   },
