@@ -12,7 +12,7 @@ MCP app for ChatGPT and Claude. Each invited user has a separate account.
 
 ![GTD Home and the priorities chart](docs/images/home.png)
 
-## Why use it?
+## Features
 
 - **One place for commitments.** Inbox, Next, Waiting, Blocked, Someday, projects,
   and reviews keep ideas separate from work you have committed to doing.
@@ -29,7 +29,7 @@ MCP app for ChatGPT and Claude. Each invited user has a separate account.
 
 ![Interactive GTD task card](docs/images/widget.png)
 
-## Get started
+## Getting Started
 
 | Goal | Guide |
 | --- | --- |
@@ -60,7 +60,7 @@ Open `http://127.0.0.1:18081`. This **test-only** preview has no login and disca
 its database when stopped. Use the self-hosting guide for persistent accounts.
 Requires Rust 1.93+, Node.js 24+, and a C toolchain.
 
-## How it fits together
+## System Architecture
 
 ```mermaid
 flowchart LR
@@ -79,7 +79,7 @@ The website and widget share React components. Rust owns task behavior,
 transactions, account isolation, and authorization. Keycloak owns sign-in and
 OAuth. Internal services listen on loopback; Caddy exposes only intended routes.
 
-## Current boundaries
+## Limitations
 
 This is an actively maintained self-hosted project for separate personal accounts,
 not a team collaboration or hosted billing platform. Projects are not shared
@@ -93,7 +93,7 @@ explain the dependency and verification requirements.
 Self-hosting controls storage. If you connect an AI service, data returned to it
 can enter its conversations and processing. See the [security model](docs/security.md).
 
-## Contributing and license
+## Contributing and License
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and
 [the documentation index](docs/README.md).
