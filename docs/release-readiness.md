@@ -21,7 +21,7 @@ source, not the former operational workspace or release archives.
 | Documented operator CLI on Linux | Prepare, bootstrap, backup and isolated restore passed; repeated restore refused; public ingress never started |
 | Dependencies and licenses | npm audit clean; Cargo advisory/license checks pass with the two narrow exceptions below; both JavaScript lockfiles checked |
 | Source export and history | Structural, local documentation-link, secret and separate privacy checks passed |
-| Public screenshots | Five demo images and one user-approved ChatGPT capture inspected; source PDFs excluded; identifying metadata removed |
+| Public screenshots | Six demo images and one user-approved ChatGPT capture inspected; source PDFs excluded; identifying metadata removed |
 
 The browser matrix covers phone and wide desktop, sidebar states, themes,
 embedded/expanded widgets, drafts, conflicts, pagination, account boundaries,

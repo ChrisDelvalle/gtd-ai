@@ -39,6 +39,8 @@ See urgency and importance together. Tasks inherit priority from the work they
 block, so a small prerequisite can get the attention a critical outcome deserves.
 Select a square to browse its tasks.
 
+![Tasks arranged by urgency and importance in the priorities matrix](docs/images/priorities.png)
+
 ### Task Context and Planning
 
 Capture ideas in Inbox and clarify them into specific next actions. Keep a brief,
