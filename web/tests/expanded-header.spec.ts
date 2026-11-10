@@ -38,6 +38,7 @@ for (const width of [320, 390]) {
       const formBox = (await form.boundingBox())!;
       expect(formBox.y).toBeGreaterThanOrEqual(bar.y + bar.height);
       expect(formBox.y + formBox.height).toBeLessThan(400);
+      await page.screenshot({ path: info.outputPath("capture-open.png") });
       await frame.getByRole("button", { name: "Close capture", exact: true }).click();
       await expect(toolbar.getByRole("button", { name: "Continue adding task", exact: true })).toBeFocused();
       await toolbar.getByRole("button", { name: "Continue adding task", exact: true }).click();

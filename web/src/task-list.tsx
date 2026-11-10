@@ -137,7 +137,7 @@ export function TaskList({
   const scrollAnchor = useTaskScrollAnchor();
   useLayoutEffect(() => {
     const root = scrollAnchor.root.current;
-    if (!environment.embedded || !root) return;
+    if (!environment.embedded || bare || !root) return;
     const toolbar = root.querySelector<HTMLElement>(":scope > .browse-toolbar, :scope > .compact-toolbar");
     if (!toolbar) return;
     const measure = () => {

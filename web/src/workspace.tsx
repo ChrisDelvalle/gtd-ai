@@ -883,6 +883,23 @@ function QuickCapture({
   const { api } = useEnvironment();
   const input = useRef<HTMLInputElement>(null),
     trigger = useRef<HTMLButtonElement>(null);
+  const dock = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!atTop || !open || hidden) return;
+    const element = dock.current;
+    const header = returnFocus.current?.closest<HTMLElement>(".browse-toolbar, .project-toolbar, .gtd-topbar");
+    if (!element || !header) return;
+    const measure = () => element.style.setProperty("--capture-header-bottom", `${header.getBoundingClientRect().bottom + 8}px`);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", measure, true);
+      element.style.removeProperty("--capture-header-bottom");
+    };
+  }, [atTop, open, hidden, returnFocus]);
   const keyboard = useKeyboardInset(open && !hidden);
   const close = () => {
     flushSync(() => setOpen(false));
@@ -928,6 +945,7 @@ function QuickCapture({
   }, [receipt, onTask]);
   return (
     <div
+      ref={dock}
       className={`capture-dock ${open ? "capture-open" : ""}`}
       data-placement={atTop ? "top" : undefined}
       hidden={hidden}

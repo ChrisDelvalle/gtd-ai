@@ -207,10 +207,10 @@ body.widget {
 /* ChatGPT may overlay its composer at the bottom of the expanded app. Keep
    capture beside the top controls, using the same mounted form and draft. */
 .widget .widget-surface[data-display="fullscreen"] .capture-dock[data-placement="top"] {
-  top: calc(var(--widget-safe-top, 0px) + var(--app-banner-height, 0px) + var(--workspace-header-height) + 8px);
+  top: var(--capture-header-bottom, calc(var(--widget-safe-top, 0px) + var(--app-banner-height, 0px) + var(--workspace-header-height) + 8px));
   bottom: auto;
   right: max(12px, var(--widget-safe-right, 0px));
-  max-height: calc(var(--widget-limit) - var(--workspace-header-height) - var(--app-banner-height, 0px) - 24px);
+  max-height: calc(var(--widget-limit) - var(--capture-header-bottom, calc(var(--workspace-header-height) + var(--app-banner-height, 0px) + 8px)) - 16px);
   overflow-y: auto;
 }
 
