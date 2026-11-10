@@ -163,6 +163,7 @@ export function FloatingPanel({
       const scrollTop = panel.scrollTop;
       panel.style.maxHeight = "none";
       const height = Math.ceil(panel.getBoundingClientRect().height);
+      let reservedViewport = 0;
       if (widget) {
         // Pick a side once from the card content, never from the iframe that
         // is still resizing. Short cards reserve real, animated space below.
@@ -184,6 +185,9 @@ export function FloatingPanel({
           ? Math.min(limit, a.bottom + height + 14)
           : contentHeight;
         reserveSpace(owner, Math.max(0, needed - contentHeight));
+        reservedViewport = surface
+          ? parseFloat(surface.style.getPropertyValue("--overlay-min-height")) || 0
+          : needed;
       }
       const below = Math.max(0, bottom - a.bottom - 6);
       const above = Math.max(0, a.top - top - 6);
@@ -200,7 +204,12 @@ export function FloatingPanel({
       const y = down ? a.bottom + 6 : a.top - actualHeight - 6;
       panel.style.top = `${Math.max(top, Math.min(y, bottom - actualHeight))}px`;
       panel.dataset.placement = down ? "bottom" : "top";
-      const ready = available >= Math.min(height, 80);
+      // The host follows the card's animated height asynchronously. Showing a
+      // scrollable menu partway through that resize lets scrollTop clamp and
+      // moves its rows between pointer down and click. Reveal only when the
+      // reserved viewport has arrived; no timer or guessed host latency.
+      const hostReady = !!panel.dataset.ready || innerHeight >= reservedViewport - 1;
+      const ready = hostReady && available >= Math.min(height, 80);
       panel.style.visibility = ready ? "visible" : "hidden";
       if (ready && !panel.dataset.ready) {
         panel.dataset.ready = "true";

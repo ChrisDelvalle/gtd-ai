@@ -73,8 +73,14 @@ for (const surface of ["website", "chat"])
           "data-theme",
           opposite,
         );
+        await card.getByRole("button", {name: "Expand view", exact: true}).click();
+        await expandedAtRest(page);
+        const navigation = card.getByRole("button", {name: /^Details:/}).first();
+        await navigation.focus();
+        await expect(navigation).toBeFocused();
         await page.emulateMedia({ colorScheme: initial });
         await expect(root).toHaveAttribute("data-theme", initial);
+        await expect(navigation).toBeFocused();
         await expect(card.locator("html")).toHaveAttribute(
           "data-theme",
           initial,

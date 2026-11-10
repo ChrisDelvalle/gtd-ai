@@ -122,8 +122,10 @@ function Chat() {
         theme,
         mode: expanded === id ? "fullscreen" : "inline",
       });
-    if (expanded) closeButton.current?.focus({ preventScroll: true });
   }, [theme, expanded]);
+  useEffect(() => {
+    if (expanded) closeButton.current?.focus({ preventScroll: true });
+  }, [expanded]);
   useEffect(() => {
     const hash = () => {
       cancelClose();

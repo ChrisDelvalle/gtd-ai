@@ -608,12 +608,15 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
   let offset: number | undefined;
   const chartRead = async (operation: string, data: object) => {
     const result = await request.post(`/api/tools/${operation}`, {headers: {Origin: baseURL!, "X-GTD-Request": "1"}, data});
-    expect(result.ok()).toBeTruthy();
+    expect(result.ok(), await result.text()).toBeTruthy();
     return result.json();
   };
   if (launch === "charts") {
     await page.clock.setFixedTime(new Date());
-    const fields = { brief: "Inspect the overdue task.", status: "next", estimated_minutes: 10, effort: "low", reason: "Disposable chart fixture" };
+    // Own a project so previous cases/repeats cannot change this grid's counts
+    // or create ambiguous project-picker labels in the shared disposable DB.
+    const {project} = await chartRead("create_project", { title: "Widget chart project", brief: "Test the project picker.", request_id: randomUUID(), reason: "Disposable chart fixture" });
+    const fields = { project_id: project.id, brief: "Inspect the overdue task.", status: "next", estimated_minutes: 10, effort: "low", reason: "Disposable chart fixture" };
     const {task: blocker} = await chartRead("capture_item", {
       ...fields, request_id: randomUUID(), title: "Widget priority fixture", notes: "Widget priority fixture notes.", importance: "unimportant",
     });
@@ -623,15 +626,14 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
     await chartRead("capture_item", {
       ...fields, request_id: randomUUID(), title: "Widget early deadline", importance: "normal", due_date: "2020-01-01", blocked_by: [blocker.id],
     });
-    await chartRead("create_project", { title: "Widget chart project", brief: "Test the project picker.", request_id: randomUUID(), reason: "Disposable chart fixture" });
-    priorities = await chartRead("priority_grid", {});
-    const first = await chartRead("priority_grid", {snapshot: priorities.snapshot, cell: {importance:"critical", urgency:"overdue"}});
+    priorities = await chartRead("priority_grid", {project: project.id});
+    const first = await chartRead("priority_grid", {project: project.id, snapshot: priorities.snapshot, cell: {importance:"critical", urgency:"overdue"}});
     priorities.previews = Array.from({length: 49}, (_, i) => i === 48 ? first.items : []);
     priorities.counts[4][0].next = 21;
     priorities.previews[28] = Array.from({length:20}, (_, i) => ({id:`preview-${i+1}`, title:`Preview task ${i+1}`, status:"next"}));
     priorities.counts[3][0] = {next:100, blocked:900, waiting:0, someday:0, inbox:0};
     priorities.counts[1][0] = {next:100, blocked:0, waiting:0, someday:0, inbox:0};
-    priorityProjects = await chartRead("list_projects", {view:"all", archived:false, limit:20});
+    priorityProjects = await chartRead("list_projects", {project_id: project.id, view:"all", archived:false, limit:20});
   }
   if (launch === "results") {
     const id = randomUUID();

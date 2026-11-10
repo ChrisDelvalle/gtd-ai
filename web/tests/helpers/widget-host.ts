@@ -98,6 +98,8 @@ export async function openWidget(page: Page, options: HostOptions = {}) {
         "gtd/accountId": options.account.id, "gtd/environment": options.environment, "gtd/timezone": options.account.timezone,
       } : undefined;
       let holdWrite = false;
+      let holdResize = false;
+      let pendingHeight: number | undefined;
       const held: (() => void)[] = [];
       const send = (v: any) => {
         if (v.result?.structuredContent) v.result._meta ??= metadata();
@@ -124,6 +126,11 @@ export async function openWidget(page: Page, options: HostOptions = {}) {
       };
       (window as any).displayTest = {
         messages,
+        holdResize() { holdResize = true; },
+        releaseResize() {
+          holdResize = false;
+          if (pendingHeight !== undefined) frame.style.height = `${pendingHeight}px`;
+        },
         holdNextWrite() { holdWrite = true; },
         releaseWrites() { held.splice(0).forEach(send => send()); },
         changeAccount(account: {id: string; timezone: string}) {
@@ -298,8 +305,10 @@ export async function openWidget(page: Page, options: HostOptions = {}) {
         if (
           m.method === "ui/notifications/size-changed" &&
           mode !== "fullscreen"
-        )
-          frame.style.height = `${m.params.height}px`;
+        ) {
+          pendingHeight = m.params.height;
+          if (!holdResize) frame.style.height = `${pendingHeight}px`;
+        }
       });
       frame.srcdoc = html;
       document.getElementById("card")!.append(frame);

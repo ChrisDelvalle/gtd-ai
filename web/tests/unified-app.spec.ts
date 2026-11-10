@@ -189,3 +189,29 @@ test('Help opened from the expanded sidebar does not reopen a closed viewer', as
   await expect(frame.getByRole('button',{name:'GTD navigation',exact:true})).toBeVisible();
   expect((await requests('ui/request-display-mode')).length).toBe(before);
 });
+
+// Hold the host at an intermediate height instead of hoping an input happens
+// during a 220 ms animation. A visible menu must not expose shifting targets.
+test("navigation waits for reserved host space before accepting a click", async ({page}, info) => {
+  const {frame, surface} = await openWidget(page, {launch: "home", empty: true});
+  await expect(frame.getByRole("button", {name: "GTD navigation"})).toHaveText("Home");
+  await expect.poll(() => surface.evaluate(el => Math.abs(
+    el.getBoundingClientRect().height - parseFloat((el as HTMLElement).style.height)
+  ))).toBeLessThan(1);
+  await page.evaluate(() => {
+    (window as any).displayTest.holdResize();
+    document.querySelector("iframe")!.style.height = "300px";
+  });
+  await frame.getByRole("button", {name: "GTD navigation"}).click();
+  const menu = frame.locator('.floating-panel[role="menu"]');
+  await expect.poll(() => surface.evaluate(el =>
+    parseFloat((el as HTMLElement).style.getPropertyValue("--overlay-min-height"))
+  )).toBeGreaterThan(400);
+  await expect(menu).toBeHidden();
+  await page.evaluate(() => (window as any).displayTest.releaseResize());
+  await expect(menu).toBeVisible();
+  await page.screenshot({path: info.outputPath("settled-navigation.png")});
+  await frame.getByRole("menuitemradio", {name: "Archive", exact: true}).click();
+  await expect(frame.getByRole("button", {name: "GTD navigation"})).toHaveText("Archive");
+  await expect(menu).toHaveCount(0);
+});

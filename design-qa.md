@@ -78,3 +78,30 @@ Follow-up result: **passed**. The 40 affected streaming, recommendation-card, an
 System-theme intent: both demos use the visitor's system light/dark preference at first paint and follow subsequent system changes until the toggle is used. The toggle is a per-page override; reload/reset returns to the current system setting. Chat widgets follow their host's theme, including toggles before a card is created. Verify both initial preferences, live system changes, overrides, reset, and inline/expanded card colors in both browser engines.
 
 System-theme result: **passed**. Eight new Chromium/WebKit cases verify the system default, live changes, manual override, reset, and card propagation. The suite passed 112 cases initially; the two reduced-motion cases still expected the deliberately removed capture sentence. After updating that expectation to the complete three-item reply, both passed. Total verified coverage is 114 browser cases and 18 data/packaging checks. Light and dark split-view screenshots were inspected.
+
+
+## Host resize and CI reliability follow-up
+
+Intended behavior: widget navigation becomes interactive after the host has
+provided the space reserved for its menu, so resizing cannot move rows during a
+click. A system theme change must retain keyboard focus in an expanded demo card.
+The regression checks hold host resize delivery explicitly and change the system
+theme while a child-frame control owns focus. Existing navigation, disclosure,
+modal gesture, and refresh checks remain enabled, with no retries added.
+
+
+The new held-resize assertion fails on the prior widget (menu visible in a
+300 px viewport while reserving 450 px), then passes with the visibility fix.
+Navigation at 390/900 px, animated/reduced-motion task expansion, and refresh
+cancellation each passed eight consecutive runs in both Chromium and WebKit
+(96 checks). All 114 demo browser cases and 18 demo data checks passed.
+
+Reviewed the first-attempt jobs in the last 18 non-bot CI runs. Earlier failures
+were corrected by waiting for mutation acknowledgments, selecting the intended
+fixture directly, using supported WebKit input, waiting for native momentum to
+end, and waiting for initial content before gating refresh requests. The recent
+demo copy failures were stale expected text, not intermittent behavior. Repeated
+chart tests also exposed shared fixture collisions; their queries now use their
+own project, preserving real ranking and drilldown reads. Five successive WebKit
+chart runs pass after that change. No retries, forced clicks, or disabled checks
+were introduced.
