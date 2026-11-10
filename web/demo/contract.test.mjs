@@ -345,3 +345,112 @@ test("search, context filters, projects, work blocks, and limitations", () => {
   );
   assert.throws(() => s.execute("update_recurrence", {}), /view-only/);
 });
+
+const reference = JSON.parse(
+  await readFile(new URL("./reference.json", import.meta.url), "utf8"),
+);
+const domainBuilt = await build({
+  entryPoints: ["src/demo/domain.ts"],
+  bundle: true,
+  write: false,
+  platform: "node",
+  format: "esm",
+});
+const domain = await import(
+  "data:text/javascript;base64," +
+    Buffer.from(domainBuilt.outputFiles[0].text).toString("base64")
+);
+test("every initial ranking and history classification agrees with Rust", () => {
+  const records = new Map(fixture.records.map((t) => [t.id, t]));
+  for (const row of reference.rankings)
+    assert.equal(domain.rank(records.get(row.id)).key, row.key, row.id);
+  for (const [i, event] of reference.events.entries()) {
+    const actual = domain.classify(fixture.changes[i]);
+    assert.deepEqual(
+      actual,
+      {
+        category: event.category,
+        automatic: event.automatic,
+        completion: event.completion,
+      },
+      `change ${event.id}`,
+    );
+  }
+});
+test("all status pages and both chart measures agree with Rust", () => {
+  const s = store();
+  for (const q of reference.queries) {
+    const actual = [];
+    let cursor;
+    do {
+      const page = s.execute("list_items", {
+        ...q.args,
+        ...(cursor ? { cursor } : {}),
+      });
+      actual.push(
+        ...page.items.map((t) => ({
+          id: t.id,
+          source: t.recommendation.source_task_id || null,
+        })),
+      );
+      cursor = page.next_cursor;
+    } while (cursor);
+    assert.deepEqual(actual, q.rows, q.args.status);
+  }
+  for (const chart of reference.charts) {
+    const actual = s.execute("activity_summary", chart.args);
+    const normalize = (days) =>
+      days.map((d) => ({
+        ...d,
+        categories: Object.fromEntries(
+          Object.entries(d.categories).filter(([, n]) => n),
+        ),
+      }));
+    assert.deepEqual(
+      normalize(actual.days),
+      normalize(chart.days),
+      chart.args.metric,
+    );
+    assert.equal(actual.total, chart.total);
+    assert.equal(actual.automatic_count, chart.automatic_count);
+  }
+});
+test("date-only and timed boundaries respect DST and ambiguous local times", () => {
+  assert.equal(
+    domain.bound({ date: "2026-03-08", timezone: "America/New_York" }, true) -
+      domain.bound({ date: "2026-03-08", timezone: "America/New_York" }),
+    23 * domain.HOUR,
+  );
+  assert.equal(
+    domain.bound({ date: "2026-11-01", timezone: "America/New_York" }, true) -
+      domain.bound({ date: "2026-11-01", timezone: "America/New_York" }),
+    25 * domain.HOUR,
+  );
+  assert.throws(
+    () =>
+      domain.bound({
+        date: "2026-03-08",
+        time: "02:30",
+        timezone: "America/New_York",
+      }),
+    /valid/,
+  );
+  assert.throws(
+    () =>
+      domain.bound({
+        date: "2026-11-01",
+        time: "01:30",
+        timezone: "America/New_York",
+      }),
+    /offset/,
+  );
+  assert.equal(
+    domain.bound({
+      date: "2026-11-01",
+      time: "01:30",
+      timezone: "America/New_York",
+      utc_offset_minutes: -300,
+    }),
+    Date.parse("2026-11-01T06:30Z"),
+  );
+});

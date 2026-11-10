@@ -94,7 +94,7 @@ export class DemoStore {
   private snapshots = new Map<string, State>();
   private receipts = new Map<
     string,
-    { fingerprint: string; result: any; ids: string[] }
+    { fingerprint: string; result: any; ids: string[]; changes: number[] }
   >();
   private groups = new Map<number, number[]>();
   private latestSnapshot?: { revision: number; token: string };
@@ -206,7 +206,11 @@ export class DemoStore {
       const date = (key: keyof Task) =>
         String(a[key] || "9999").localeCompare(String(b[key] || "9999"));
       const order = () => seq.get(a.id)! - seq.get(b.id)!;
-      if (args.sort === "updated") return b.last_change_id - a.last_change_id;
+      if (
+        args.sort === "updated" ||
+        (!args.sort && (args.status === "done" || args.archived === true))
+      )
+        return b.last_change_id - a.last_change_id;
       if (args.sort === "created") return order();
       if (args.sort === "importance")
         return importance(b) - importance(a) || order();
@@ -447,8 +451,11 @@ export class DemoStore {
         (!through || localDate(c.created_at) <= String(through)),
     );
     if (args.from_request_ids) {
-      const ids = this.requestIds(args.from_request_ids);
-      rows = rows.filter((c) => ids.includes(c.task_id));
+      this.requestIds(args.from_request_ids);
+      const ids = (args.from_request_ids as string[]).flatMap(
+        (id) => this.receipts.get(id)!.changes,
+      );
+      rows = rows.filter((c) => ids.includes(c.id));
     }
     rows.reverse();
     const { rows: changes, ...page } = this.page(
@@ -521,8 +528,13 @@ export class DemoStore {
     const totals = Object.fromEntries(categories.map((c) => [c, 0])),
       days = [];
     let total = 0;
-    const byDay = new Map<string, typeof selected>();
+    const completionCounts = new Map<string, number>();
     for (const c of selected) {
+      const day = localDate(c.created_at);
+      completionCounts.set(day, (completionCounts.get(day) || 0) + 1);
+    }
+    const byDay = new Map<string, typeof selected>();
+    for (const c of events.filter((c) => !c.activity.automatic)) {
       const d = localDate(c.created_at);
       if (!byDay.has(d)) byDay.set(d, []);
       byDay.get(d)!.push(c);
@@ -536,7 +548,12 @@ export class DemoStore {
           ]),
         );
       for (const c of categories) totals[c] += counts[c];
-      const count = date > TODAY ? null : rows.length;
+      const count =
+        date > TODAY
+          ? null
+          : completed
+            ? completionCounts.get(date) || 0
+            : rows.length;
       total += count || 0;
       days.push({
         date,
@@ -1013,7 +1030,36 @@ export class DemoStore {
         result = { results, replayed: false };
       } else result = this.mutate(name, args);
       const ids = (result.results || [result]).map((r: any) => r.task.id);
-      this.receipts.set(request, { fingerprint, result: copy(result), ids });
+      // Validate the final batch state so coupled project/task moves are atomic.
+      for (const project of this.records.filter(
+        (t) => t.entity_type === "project",
+      )) {
+        const children = this.records.filter(
+          (t) => t.project_id === project.id && !t.deleted,
+        );
+        if (project.deleted && children.length)
+          fail("Move the project tasks before deleting the project.");
+        if (project.archived && children.some((t) => !t.archived))
+          fail("Archive or move the project tasks first.");
+        if (
+          project.status === "done" &&
+          children.some((t) => !t.archived && t.status !== "done")
+        )
+          fail("Complete, archive, or move unfinished project tasks first.");
+        if (
+          project.status === "someday" &&
+          children.some(
+            (t) => !t.archived && !["someday", "done"].includes(t.status),
+          )
+        )
+          fail("Move retained project tasks to Someday first.");
+      }
+      this.receipts.set(request, {
+        fingerprint,
+        result: copy(result),
+        ids,
+        changes: this.changes.slice(saved.changes.length).map((c) => c.id),
+      });
       return { ...result, request_id: request };
     } catch (e) {
       this.records = saved.records;

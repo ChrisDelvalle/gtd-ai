@@ -231,17 +231,15 @@ export function graph(records: Task[]) {
   for (const t of byId.values()) visit(t);
   const ranks = new Map(records.map((t) => [t.id, rank(t)]));
   const placements = new Map(
-    records
-      .filter(live)
-      .map((t) => [
-        t.id,
-        {
-          ...timing(t),
-          importance: importance(t),
-          priority_from: null as { id: string; title: string } | null,
-          urgency_from: undefined as { id: string; title: string } | undefined,
-        },
-      ]),
+    records.filter(live).map((t) => [
+      t.id,
+      {
+        ...timing(t),
+        importance: importance(t),
+        priority_from: null as { id: string; title: string } | null,
+        urgency_from: undefined as { id: string; title: string } | undefined,
+      },
+    ]),
   );
   for (const t of order.reverse()) {
     for (const id of t.blocked_by || []) {
@@ -292,6 +290,23 @@ const timingFields = [
 ];
 export const different = (a: unknown, b: unknown) =>
   JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
+function schedule(value: any) {
+  return value
+    ? {
+        segments: value.segments?.map((s: any) => ({
+          from: s.from,
+          rule: s.rule,
+          timing: Object.fromEntries(
+            [...timingFields, "due_offset_days", "review_offset_days"].map(
+              (k) => [k, s.template?.[k] ?? null],
+            ),
+          ),
+        })),
+        pauses: value.pauses,
+        ended_on: value.ended_on,
+      }
+    : null;
+}
 export function classify(c: Change) {
   const a = c.after,
     b = c.before;
@@ -320,7 +335,7 @@ export function classify(c: Change) {
                   a.occurrence?.scheduled_date,
                   b.occurrence?.scheduled_date,
                 ) ||
-                different(a.recurrence, b.recurrence)
+                different(schedule(a.recurrence), schedule(b.recurrence))
               ? "scheduling"
               : "edited";
   return {
