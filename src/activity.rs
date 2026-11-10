@@ -413,9 +413,19 @@ pub fn validate_requests(ids: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ResultsSort {
+    ResultOrder,
+    Updated,
+    Title,
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ResultsQuery {
+    pub sort: Option<ResultsSort>,
+    pub snapshot: Option<String>,
     pub from_request_ids: Vec<String>,
     pub cursor: Option<String>,
     pub limit: Option<u32>,

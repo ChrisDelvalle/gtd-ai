@@ -132,6 +132,7 @@ impl Store {
                             agent_context: agent,
                             cursor: input.cursor,
                             limit: input.limit,
+                            ..Default::default()
                         },
                     )?
                 } else {

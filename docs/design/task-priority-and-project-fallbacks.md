@@ -1,6 +1,10 @@
 # Task priority, project fallbacks, and sorting
 
-Status: **Design for review. Not implemented.**
+Status: **Approved for implementation.**
+
+Release decisions: defer project importance; retain strongest-whole dependency
+ranking; add Planned today to existing task filters. See the
+[implementation checklist](priority-release-checklist.md).
 
 Date: November 10, 2026. Implementation inspected at `7068d84`.
 

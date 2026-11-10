@@ -463,8 +463,12 @@ pub enum TaskSort {
     Action,
     Relevance,
     Due,
+    EffectiveDue,
     Updated,
     Created,
+    CreatedDesc,
+    Title,
+    Review,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
@@ -515,7 +519,7 @@ pub struct ListItems {
     pub view: Option<TaskView>,
     /// Summary by default; a single task_id defaults to full (includes notes, links, location, timestamps).
     pub detail: Option<Detail>,
-    /// Default action: readiness/status first, then immediate timing, planned work, and importance with bounded urgency.
+    /// Default action: readiness/status first, then importance plus bounded constraint urgency and deterministic timing ties.
     /// status=done or archived=true defaults to updated; text queries default to relevance. Explicit sort wins.
     pub sort: Option<TaskSort>,
     /// Plain keywords: 1–10 words, at most 500 characters; no quoted phrases or exclusion operators. All terms match with typo/accent tolerance and prefixes; default relevance order.
@@ -614,6 +618,7 @@ pub struct MutationResult {
 
 #[derive(Debug, Serialize)]
 pub struct ListResult {
+    pub effective_sort: String,
     /// Computed from the same graph as this page. Never part of stored tasks.
     #[serde(skip)]
     pub blocking_counts: std::collections::BTreeMap<String, usize>,
@@ -631,6 +636,8 @@ impl ListItems {
         match self.sort.unwrap_or({
             if self.query.as_ref().is_some_and(|q| !q.trim().is_empty()) {
                 TaskSort::Relevance
+            } else if self.review_on.is_some() {
+                TaskSort::Review
             } else if matches!(self.status, Some(Status::Done | Status::Archived))
                 || self.archived == Some(true)
             {
@@ -645,6 +652,10 @@ impl ListItems {
             TaskSort::Due => "due",
             TaskSort::Updated => "updated",
             TaskSort::Created => "created",
+            TaskSort::CreatedDesc => "created_desc",
+            TaskSort::EffectiveDue => "effective_due",
+            TaskSort::Title => "title",
+            TaskSort::Review => "review",
         }
     }
     pub fn effective_detail(&self) -> Detail {
@@ -768,6 +779,8 @@ pub struct UpdateProject {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(deny_unknown_fields)]
 pub struct ListProjects {
+    /// Explicit global ordering; omission preserves the existing view default.
+    pub sort: Option<TaskSort>,
     #[serde(skip_deserializing, default, skip_serializing_if = "is_false")]
     #[schemars(skip)]
     pub agent_context: bool,

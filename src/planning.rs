@@ -607,24 +607,16 @@ pub struct Recommendation {
     pub next_change_at: Option<String>,
     #[serde(skip)]
     pub key: String,
-}
-fn stamp(v: DateTime<Utc>) -> String {
-    v.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
-}
-impl Task {
-    pub(crate) fn timing_constraints(&self) -> [(&'static str, Option<Moment>); 2] {
-        [
-            ("Deadline", self.planning.deadline(self.due_date.as_deref())),
-            (
-                "Start by",
-                if self.planning.started {
-                    None
-                } else {
-                    self.planning.start_by.clone()
-                },
-            ),
-        ]
-    }
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effective_deadline: Option<Moment>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deadline_project: Option<crate::priority_policy::Source>,
+    #[serde(default)]
+    pub policy: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_fallback: Option<crate::priority_policy::ProjectDeadline>,
 }
 impl WorkBlock {
     pub(crate) fn bounds(&self) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
@@ -643,128 +635,7 @@ impl WorkBlock {
 }
 
 pub fn evaluate(t: &Task, now: DateTime<Utc>) -> Recommendation {
-    let p = &t.planning;
-    let importance = p.importance.map_or(3, Importance::rank);
-    let mut boundaries = vec![];
-    let constraints = t.timing_constraints();
-    let mut earliest: Option<(DateTime<Utc>, &str)> = None;
-    let mut immediate = false;
-    for (label, m) in constraints
-        .iter()
-        .filter_map(|(l, m)| m.as_ref().map(|m| (*l, m)))
-    {
-        if let Ok(end) = m.bound(true) {
-            if earliest.is_none_or(|(d, _)| end < d) {
-                earliest = Some((end, label));
-            }
-            let today = date(&m.date).is_ok_and(|d| {
-                zone(&m.timezone).is_ok_and(|tz| now.with_timezone(&tz).date_naive() >= d)
-            });
-            if end <= now
-                || (m.time.is_some() && end <= now + Duration::hours(2))
-                || (m.time.is_none() && today)
-            {
-                immediate = true;
-            }
-            boundaries.extend([
-                end - Duration::days(7),
-                end - Duration::hours(48),
-                end - Duration::hours(2),
-                end,
-            ]);
-            if m.time.is_none()
-                && let Ok(begin) = m.bound(false)
-            {
-                boundaries.push(begin);
-            }
-        }
-    }
-    if let Some(available) = p.not_before.as_ref().and_then(|m| m.bound(false).ok()) {
-        boundaries.push(available);
-    }
-    let current_blocks: Vec<_> = p
-        .blocks()
-        .iter()
-        .filter_map(|b| {
-            let (a, end) = b.bounds().ok()?;
-            boundaries.extend([a, end]);
-            (a <= now && now < end).then_some((a, end))
-        })
-        .collect();
-    let block = current_blocks.into_iter().min_by_key(|(_, end)| *end);
-    let in_block = block.is_some();
-    // Targets boost remaining work, but never masquerade as immediate deadlines.
-    let mut planning_constraint = earliest;
-    if let Ok(Some((target, _))) = p.buffer_target(t.due_date.as_deref())
-        && let Ok(end) = target.bound(true)
-    {
-        boundaries.extend([end - Duration::days(7), end - Duration::hours(48), end]);
-        if planning_constraint.is_none_or(|(d, _)| end < d) {
-            planning_constraint = Some((end, "Buffer target"));
-        }
-    }
-    let boost = planning_constraint.map_or(0, |(d, _)| {
-        if d <= now + Duration::hours(48) {
-            2
-        } else if d <= now + Duration::days(7) {
-            1
-        } else {
-            0
-        }
-    });
-    let group = if immediate {
-        0
-    } else if in_block {
-        1
-    } else {
-        2
-    };
-    let value = if group < 2 {
-        importance
-    } else {
-        importance + boost
-    };
-    let tie = if group == 1 {
-        block.map(|(_, b)| b)
-    } else if group == 2 {
-        planning_constraint.map(|(d, _)| d)
-    } else {
-        earliest.map(|(d, _)| d)
-    }
-    .map_or(999_999_999_999_999, |d| {
-        d.timestamp_millis() + 100_000_000_000_000
-    });
-    let reason = if immediate {
-        format!(
-            "{} {}",
-            earliest.map_or("Timing", |(_, l)| l),
-            if earliest.is_some_and(|(d, _)| d <= now) {
-                "overdue"
-            } else {
-                "due soon"
-            }
-        )
-    } else if in_block {
-        "Planned now".into()
-    } else if boost > 0 {
-        format!(
-            "{} importance · approaching {}",
-            p.importance.unwrap_or(Importance::Normal).label(),
-            planning_constraint.unwrap().1.to_lowercase()
-        )
-    } else {
-        p.importance
-            .map_or("Normal ranking · importance unset".into(), |i| {
-                format!("{} importance", i.label())
-            })
-    };
-    Recommendation {
-        source_task_id: None,
-        reason,
-        evaluated_at: stamp(now),
-        next_change_at: boundaries.into_iter().filter(|d| *d > now).min().map(stamp),
-        key: format!("{group}:{:02}:{:02}:{tie:015}", 8 - value, 6 - importance),
-    }
+    crate::priority_policy::evaluate(t, &crate::priority_policy::resolve(t, None), now, None)
 }
 pub fn due_key(t: &Task) -> i64 {
     t.planning
@@ -775,6 +646,11 @@ pub fn due_key(t: &Task) -> i64 {
 pub fn register(c: &rusqlite::Connection) -> rusqlite::Result<()> {
     use rusqlite::functions::FunctionFlags;
     let flags = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DETERMINISTIC;
+    c.create_scalar_function("gtd_title", 1, flags, |ctx| {
+        let t: Task = serde_json::from_str(&ctx.get::<String>(0)?)
+            .map_err(|e| rusqlite::Error::UserFunctionError(Box::new(e)))?;
+        Ok(t.title.to_lowercase())
+    })?;
     c.create_scalar_function("gtd_rank", 2, flags, |ctx| {
         let t: Task = serde_json::from_str(&ctx.get::<String>(0)?)
             .map_err(|e| rusqlite::Error::UserFunctionError(Box::new(e)))?;
@@ -812,7 +688,7 @@ pub fn register(c: &rusqlite::Connection) -> rusqlite::Result<()> {
             .as_ref()
             .and_then(|m| m.bound(false).ok())
             .filter(|at| *at > now)
-            .map(stamp))
+            .map(|v| v.to_rfc3339_opts(chrono::SecondsFormat::Millis, true)))
     })?;
     c.create_scalar_function("gtd_effort", 1, flags, |ctx| {
         let t: Task = serde_json::from_str(&ctx.get::<String>(0)?)

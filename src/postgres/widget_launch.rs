@@ -235,6 +235,7 @@ impl Store {
                             cursor: input.cursor,
                             limit: input.limit,
                             agent_context: true,
+                            ..Default::default()
                         };
                         let result = tx.results(query)?;
                         base = Cursor::decode(result["snapshot"].as_str().ok_or(Error::Reconciliation)?)?;

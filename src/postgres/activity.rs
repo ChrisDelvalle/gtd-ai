@@ -362,25 +362,75 @@ impl AccountTransaction<'_> {
     }
     pub(super) fn results(&mut self, q: ResultsQuery) -> Result<Value> {
         let ids = self.request_records(&q.from_request_ids)?;
+        let key = json!({"requests":q.from_request_ids,"sort":q.sort});
+        let base = if let Some(token) = &q.snapshot {
+            let decoded = Cursor::decode(token)?;
+            if decoded.query["requests"] != key["requests"] {
+                return Err(Error::ResetRequired);
+            }
+            Some(self.list_cursor(
+                Some(token),
+                "request_results",
+                decoded.query,
+                q.agent_context,
+                0,
+            )?)
+        } else {
+            None
+        };
         let mut cursor = self.list_cursor(
             q.cursor.as_deref(),
             "request_results",
-            query_key(&q)?,
+            key,
             q.agent_context,
             0,
         )?;
+        if let Some(base) = base {
+            if q.cursor.is_some()
+                && (cursor.high != base.high || cursor.evaluated_at != base.evaluated_at)
+            {
+                return Err(Error::ResetRequired);
+            }
+            cursor.high = base.high;
+            cursor.anchor = base.anchor;
+            cursor.evaluated_at = base.evaluated_at;
+        }
         let snapshot = Cursor {
             position: 0,
             ..cursor.clone()
         }
         .encode()?;
         let max = limit(q.limit, 5)?;
-        let rows=self.tx.query("SELECT document FROM (SELECT DISTINCT ON(entity_id) entity_id,seq,document FROM gtd.revisions WHERE account_id=$1 AND seq<=$2 AND entity_id=ANY($3) ORDER BY entity_id,seq DESC) r ORDER BY seq DESC,entity_id LIMIT $4 OFFSET $5",&[&self.account.id,&cursor.high,&ids,&((max+1)as i64),&(cursor.position as i64)])?;
+        let titles=self.tx.query("SELECT entity_id,document::jsonb->>'title',seq FROM (SELECT DISTINCT ON(entity_id) entity_id,seq,document FROM gtd.revisions WHERE account_id=$1 AND seq<=$2 AND entity_id=ANY($3) ORDER BY entity_id,seq DESC) r", &[&self.account.id,&cursor.high,&ids])?;
+        let mut ordered: Vec<(String, String, i64)> = titles
+            .into_iter()
+            .map(|r| (r.get(0), r.get::<_, String>(1).to_lowercase(), r.get(2)))
+            .collect();
+        ordered.sort_by(|a, b| {
+            if q.sort == Some(crate::activity::ResultsSort::Title) {
+                a.1.cmp(&b.1).then(a.0.cmp(&b.0))
+            } else {
+                b.2.cmp(&a.2).then(a.0.cmp(&b.0))
+            }
+        });
+        let chosen: Vec<_> = ordered
+            .into_iter()
+            .skip(cursor.position as usize)
+            .take(max + 1)
+            .map(|v| v.0)
+            .collect();
+        let bodies=self.tx.query("SELECT entity_id,document FROM (SELECT DISTINCT ON(entity_id) entity_id,document FROM gtd.revisions WHERE account_id=$1 AND seq<=$2 AND entity_id=ANY($3) ORDER BY entity_id,seq DESC) r", &[&self.account.id,&cursor.high,&chosen])?;
+        let mut bodies: std::collections::HashMap<String, String> =
+            bodies.into_iter().map(|r| (r.get(0), r.get(1))).collect();
+        let rows: Vec<_> = chosen
+            .into_iter()
+            .filter_map(|id| bodies.remove(&id))
+            .collect();
         let mut records = Vec::new();
         let mut bytes = 1024 + snapshot.len() * 2;
         let mut more = false;
         for row in rows {
-            let task: Task = serde_json::from_str(&row.get::<_, String>(0))?;
+            let task: Task = serde_json::from_str(&row)?;
             let record = projection::page_record_with_agent_notes(
                 &task,
                 Detail::Full,
@@ -399,7 +449,7 @@ impl AccountTransaction<'_> {
         cursor.position += records.len() as u64;
         Ok(
             json!({"app":"gtd","view":"results","records":records,"from_request_ids":q.from_request_ids,
-            "next_cursor":if more{Some(cursor.encode()?)}else{None},"snapshot":snapshot,"evaluated_at":cursor.evaluated_at,"response_version":2}),
+            "next_cursor":if more{Some(cursor.encode()?)}else{None},"snapshot":snapshot,"evaluated_at":cursor.evaluated_at,"response_version":2,"sort":q.sort.unwrap_or(crate::activity::ResultsSort::ResultOrder)}),
         )
     }
 }

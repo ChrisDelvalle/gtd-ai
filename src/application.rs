@@ -157,7 +157,7 @@ impl Application {
                                 return Err(StoreError::Invalid("series_id requires view=repeating and a valid series ID".into()));
                             }
                         if input.view==GtdView::Results {
-                            store.request_results(crate::activity::ResultsQuery{from_request_ids:input.from_request_ids.ok_or_else(||StoreError::Invalid("Results requires from_request_ids".into()))?,agent_context:agent,cursor:input.cursor,limit:input.limit})?
+                            store.request_results(crate::activity::ResultsQuery{from_request_ids:input.from_request_ids.ok_or_else(||StoreError::Invalid("Results requires from_request_ids".into()))?,agent_context:agent,cursor:input.cursor,limit:input.limit,..Default::default()})?
                         } else {
                             if input.from_request_ids.is_some() || input.cursor.is_some() || input.limit.is_some(){return Err(StoreError::Invalid("from_request_ids requires view=results".into()));}
                             json!({"view":input.view,"series_id":input.series_id,"app":"gtd","response_version":2})

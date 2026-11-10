@@ -53,7 +53,7 @@ pub(super) fn decode(c: &Connection, value: &str) -> Result<Cursor> {
         .map(|i| u8::from_str_radix(&value[i..i + 2], 16).map_err(|_| StoreError::ResetRequired))
         .collect::<Result<Vec<_>>>()?;
     let cursor: Cursor = serde_json::from_slice(&bytes).map_err(|_| StoreError::ResetRequired)?;
-    if cursor.v != 1
+    if cursor.v != 2
         || cursor.position > i64::MAX as u64
         || cursor.high < 0
         || cursor.store != identity(c)?
@@ -71,7 +71,7 @@ pub(super) fn make(
     query: Value,
 ) -> Result<Cursor> {
     Ok(Cursor {
-        v: 1,
+        v: 2,
         evaluated_at: Some(crate::clock::timestamp()),
         store: identity(c)?,
         phase: phase.into(),
@@ -245,7 +245,7 @@ impl Store {
             |id| snapshot.series_timezones.get(id).map(String::as_str),
         )?;
         let result = if let Some(cell) = q.cell {
-            let key = json!({"project":q.project,"cell":cell});
+            let key = json!({"project":q.project,"cell":cell,"sort":q.sort});
             let mut cursor = if let Some(value) = q.cursor.as_deref() {
                 let cursor = decode(&tx, value)?;
                 if cursor.phase != priority_grid::CELL_CURSOR
@@ -274,7 +274,7 @@ impl Store {
                 .collect();
             let input = ListItems {
                 task_ids: Some(ids),
-                sort: Some(TaskSort::Action),
+                sort: Some(q.sort.unwrap_or(TaskSort::Action)),
                 ..Default::default()
             };
             let tasks = select(
@@ -310,6 +310,7 @@ impl Drop for RankingFunctions<'_> {
         // connection. Statements using these functions have already been dropped.
         let _ = self.0.remove_function("gtd_dependency_key", 1);
         let _ = self.0.remove_function("gtd_dependency_next", 1);
+        let _ = self.0.remove_function("gtd_effective_due", 1);
     }
 }
 
@@ -355,7 +356,8 @@ impl TaskSnapshot {
             .filter(|at| *at > timestamp)
             .min()
             .map(|at| at.to_rfc3339_opts(chrono::SecondsFormat::Millis, true));
-        let rankings = std::sync::Arc::new(graph.rankings(timestamp));
+        let rankings =
+            std::sync::Arc::new(graph.rankings_with_timezones(timestamp, &series_timezones));
         let blocking_counts = graph.blocking_counts();
         Ok(Self {
             graph,
@@ -422,12 +424,15 @@ fn select(
     // Choose the same first result with or without grouping, including explicit
     // deadline/status exceptions. Reuse the order to keep representatives consistent.
     let order = "CASE WHEN ?17='relevance' THEN search_position END,
-      CASE WHEN ?16 IS NOT NULL THEN json_extract(document,'$.review_date') END,
+      CASE WHEN ?17='review' THEN json_extract(document,'$.review_date') END,
       CASE WHEN ?17='action' THEN COALESCE(json_extract(document,'$.archived'),0) END,
       CASE WHEN ?17='action' THEN CASE json_extract(document,'$.status') WHEN 'next' THEN 0 WHEN 'active' THEN 0 WHEN 'inbox' THEN 1 WHEN 'waiting' THEN 2 WHEN 'blocked' THEN 3 WHEN 'someday' THEN 4 WHEN 'done' THEN 5 ELSE 6 END END,
       CASE WHEN ?17='action' AND ?2='task' THEN dependency_key END,
       CASE WHEN ?17='importance' THEN gtd_importance(document) END DESC,
       CASE WHEN ?17='due' OR (?17='action' AND ?2!='task') THEN gtd_due(document) END,
+      CASE WHEN ?17='effective_due' THEN gtd_effective_due(entity_id) END,
+      CASE WHEN ?17='title' THEN gtd_title(document) END,
+      CASE WHEN ?17='created_desc' THEN created_seq END DESC,
       CASE WHEN ?17='updated' THEN seq END DESC, created_seq, entity_id";
     let pending = "json_extract(document,'$.occurrence') IS NOT NULL AND json_extract(document,'$.status')!='done' AND COALESCE(json_extract(document,'$.archived'),0)=0 AND COALESCE(json_extract(document,'$.occurrence.skipped'),0)=0";
     let timestamp = chrono::DateTime::parse_from_rfc3339(evaluated_at)
@@ -458,6 +463,25 @@ fn select(
         move |ctx| {
             let id: String = ctx.get(0)?;
             Ok(keys.get(&id).map(|r| r.key.clone()))
+        },
+    )?;
+    let effective = snapshot
+        .map(|s| {
+            s.graph
+                .facts
+                .iter()
+                .map(|(id, f)| (id.clone(), f.due_key()))
+                .collect::<std::collections::HashMap<_, _>>()
+        })
+        .unwrap_or_default();
+    c.create_scalar_function(
+        "gtd_effective_due",
+        1,
+        rusqlite::functions::FunctionFlags::SQLITE_UTF8
+            | rusqlite::functions::FunctionFlags::SQLITE_DETERMINISTIC,
+        move |ctx| {
+            let id: String = ctx.get(0)?;
+            Ok(effective.get(&id).copied().unwrap_or(i64::MAX))
         },
     )?;
     let boundaries = rankings.clone();
@@ -570,6 +594,7 @@ fn select(
             );
         }
         if let Some(r) = task.recommendation.as_mut() {
+            r.revision = Some(h);
             r.next_change_at = next_change;
         }
         Ok(task)
@@ -715,6 +740,7 @@ pub(super) fn read_tasks_in(
         }
     }
     Ok(ListResult {
+        effective_sort: input.effective_sort().into(),
         blocking_counts: if input.agent_context {
             Default::default()
         } else {
@@ -758,6 +784,7 @@ impl Store {
         let exact = input.project_id.is_some();
         let key = query_key(&input)?;
         let filter = ListItems {
+            sort: input.sort,
             task_id: input.project_id,
             status: input.status.map(Into::into).or(
                 if input.view == Some(TaskView::Active)

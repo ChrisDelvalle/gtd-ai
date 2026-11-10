@@ -24,7 +24,7 @@ impl Store {
                 return Err(Error::ResetRequired);
             }
             let cell_page = if let Some(cell) = q.cell {
-                let key = json!({"project":q.project,"cell":cell});
+                let key = json!({"project":q.project,"cell":cell,"sort":q.sort});
                 let cursor = if let Some(cursor) = &q.cursor {
                     tx.list_cursor(Some(cursor), priority_grid::CELL_CURSOR, key, false, 0)?
                 } else {
@@ -58,7 +58,7 @@ impl Store {
                 return snapshot.priority_summary(&base, &grid);
             };
             let rows = snapshot
-                .priority_order()
+                .priority_order_with(q.sort.unwrap_or(TaskSort::Action))
                 .filter(|task| grid.includes(task, cell))
                 .skip(cursor.position as usize)
                 .map(|task| grid.row(task, &snapshot.graph, &snapshot.rankings));
@@ -72,10 +72,13 @@ impl Store {
 
 impl Snapshot {
     fn priority_order(&self) -> impl Iterator<Item = &crate::model::Task> {
+        self.priority_order_with(TaskSort::Action)
+    }
+    fn priority_order_with(&self, sort: TaskSort) -> impl Iterator<Item = &crate::model::Task> {
         let input = ListItems {
             view: Some(TaskView::All),
             archived: Some(false),
-            sort: Some(TaskSort::Action),
+            sort: Some(sort),
             ..Default::default()
         };
         self.select(&input, EntityType::Task)

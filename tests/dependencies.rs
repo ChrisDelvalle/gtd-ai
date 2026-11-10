@@ -337,8 +337,14 @@ fn strongest_source_never_adds_fanout_or_crosses_inactive_branches() {
     let ranked = get(&mut s, &root.id).recommendation.unwrap();
     assert_eq!(ranked.source_task_id, Some(urgent.id.clone()));
     assert_eq!(
-        ranked.key,
-        get(&mut s, &urgent.id).recommendation.unwrap().key
+        ranked.key.split(':').take(10).collect::<Vec<_>>(),
+        get(&mut s, &urgent.id)
+            .recommendation
+            .unwrap()
+            .key
+            .split(':')
+            .take(10)
+            .collect::<Vec<_>>()
     );
     assert_eq!(get(&mut s, &root.id).due_date, None);
     for i in 0..5 {

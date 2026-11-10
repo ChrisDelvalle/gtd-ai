@@ -2,7 +2,6 @@ use crate::{
     model::{EntityType, Status, Task},
     planning::{Importance, Moment, Recommendation},
     projection::PAGE_BYTES,
-    recurrence_model::LEGACY_SERIES_TIMEZONE,
     store::{StoreError, dependencies::Graph},
 };
 use chrono::{DateTime, Duration, Utc};
@@ -14,8 +13,8 @@ use std::collections::HashMap;
 pub(crate) const SUMMARY: &str = "priority_grid";
 pub(crate) const CELL: &str = "priority_cell";
 // The same frozen records can land in different cells under new timing rules.
-pub(crate) const SUMMARY_CURSOR: &str = "priority_grid_v3";
-pub(crate) const CELL_CURSOR: &str = "priority_cell_v3";
+pub(crate) const SUMMARY_CURSOR: &str = "priority_grid_v4";
+pub(crate) const CELL_CURSOR: &str = "priority_cell_v4";
 pub(crate) const PAGE_SIZE: usize = 20;
 const PREVIEW_BYTES: usize = 64 * 1024;
 
@@ -85,6 +84,30 @@ pub(crate) struct Cell {
     urgency: Urgency,
     #[serde(default)]
     scope: Scope,
+    #[serde(default)]
+    timing: TimingFilter,
+}
+
+#[derive(Clone, Copy, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+enum TimingFilter {
+    #[default]
+    All,
+    Deadlines,
+    StartBy,
+    Planned,
+    Undated,
+}
+impl TimingFilter {
+    fn includes(self, flags: u8, urgency: Urgency) -> bool {
+        match self {
+            Self::All => true,
+            Self::Deadlines => flags & 1 != 0,
+            Self::StartBy => flags & 2 != 0,
+            Self::Planned => flags & 4 != 0,
+            Self::Undated => urgency == Urgency::Undated,
+        }
+    }
 }
 
 #[derive(Default, Deserialize, JsonSchema)]
@@ -96,6 +119,7 @@ pub(crate) struct Query {
     pub cursor: Option<String>,
     pub offset: Option<u32>,
     pub limit: Option<u32>,
+    pub sort: Option<crate::model::TaskSort>,
 }
 impl Query {
     pub fn validate(&self) -> Result<(), StoreError> {
@@ -130,6 +154,13 @@ impl Query {
                 "Priority cell limits must be between 1 and 100.".into(),
             ));
         }
+        if self.sort.is_some() && self.cell.is_none()
+            || self.sort == Some(crate::model::TaskSort::Relevance)
+        {
+            return Err(StoreError::Invalid(
+                "Choose a task sort for a priority cell; relevance requires a search.".into(),
+            ));
+        }
         Ok(())
     }
 }
@@ -139,6 +170,10 @@ struct Timing {
     work_block: Option<Moment>,
     scheduled: Option<Moment>,
     next: Option<DateTime<Utc>>,
+    flags: u8,
+    evidence: (u8, i64),
+    deadline: Option<Moment>,
+    project: Option<crate::priority_policy::Source>,
 }
 impl Timing {
     fn boundary(&mut self, at: DateTime<Utc>, now: DateTime<Utc>) {
@@ -155,14 +190,47 @@ impl Timing {
     }
 }
 
+#[cfg(test)]
 fn timing_at(task: &Task, now: DateTime<Utc>, series_timezone: Option<&str>) -> Timing {
+    timing_resolved(
+        task,
+        &crate::priority_policy::resolve(task, None),
+        now,
+        series_timezone,
+    )
+}
+fn timing_resolved(
+    task: &Task,
+    facts: &crate::priority_policy::Facts,
+    now: DateTime<Utc>,
+    series_timezone: Option<&str>,
+) -> Timing {
     let mut result = Timing {
         urgency: Urgency::Undated,
         work_block: None,
         scheduled: None,
         next: None,
+        flags: u8::from(facts.deadline.is_some())
+            | if !task.planning.started && task.planning.start_by.is_some() {
+                2
+            } else {
+                0
+            },
+        evidence: (3, i64::MAX),
+        deadline: facts.deadline.clone(),
+        project: facts.project.clone(),
     };
-    for (_, constraint) in task.timing_constraints() {
+    let selected = crate::priority_policy::selected_plan(task, now, series_timezone);
+    if selected.is_some() {
+        result.flags |= 4;
+    }
+    for block in task.planning.blocks() {
+        if let Ok((start, end)) = block.bounds() {
+            result.boundary(start, now);
+            result.boundary(end, now);
+        }
+    }
+    for (_, constraint) in facts.constraints(task) {
         let Some(moment) = constraint else { continue };
         let Ok(end) = moment.bound(true) else {
             continue;
@@ -179,7 +247,12 @@ fn timing_at(task: &Task, now: DateTime<Utc>, series_timezone: Option<&str>) -> 
         } else {
             Urgency::upcoming(end, now)
         };
-        result.urgency = result.urgency.max(urgency);
+        if urgency > result.urgency
+            || urgency == result.urgency && (0, end.timestamp_millis()) < result.evidence
+        {
+            result.urgency = urgency;
+            result.evidence = (0, end.timestamp_millis());
+        }
         result.approaching(end, now, true);
         result.boundary(immediate_at, now);
         result.boundary(end, now);
@@ -191,72 +264,47 @@ fn timing_at(task: &Task, now: DateTime<Utc>, series_timezone: Option<&str>) -> 
         {
             let urgency = Urgency::upcoming(at, now);
             if urgency >= Urgency::Within7Days {
-                result.urgency = result.urgency.max(urgency);
+                if urgency > result.urgency {
+                    result.urgency = urgency;
+                    result.evidence = (1, at.timestamp_millis());
+                }
             }
             result.approaching(at, now, false);
         }
         return result;
     }
 
-    // Prefer a current block, then the next planned block, then the block
-    // that ended most recently. Earlier sessions may be part of a larger plan.
-    let block = task
-        .planning
-        .blocks()
-        .into_iter()
-        .filter_map(|block| {
-            let (start, end) = block.bounds().ok()?;
-            Some((block, start, end))
-        })
-        .min_by_key(|(_, start, end)| {
-            if *end <= now {
-                (2, now - *end)
-            } else if *start <= now {
-                (0, *end - now)
-            } else {
-                (1, *start - now)
-            }
-        });
-    if let Some((block, start, end)) = block {
-        let immediate_at = if block.start.time.is_some() {
-            start - Duration::hours(2)
+    if let Some(plan) = selected {
+        let immediate_at = if !plan.occurrence && plan.moment.time.is_some() {
+            plan.start - Duration::hours(2)
         } else {
-            start
+            plan.start
         };
-        result.urgency = if now >= end {
+        result.urgency = if now >= plan.end {
             Urgency::Overdue
         } else if now >= immediate_at {
             Urgency::Immediate
         } else {
-            Urgency::upcoming(start, now)
+            Urgency::upcoming(plan.start, now)
         };
-        result.work_block = Some(block.start);
-        result.approaching(start, now, true);
-        result.boundary(immediate_at, now);
-        result.boundary(start, now);
-        result.boundary(end, now);
-        return result;
-    }
-    if let Some(occurrence) = &task.occurrence {
-        let scheduled = Moment {
-            date: occurrence.scheduled_date.clone(),
-            time: None,
-            timezone: series_timezone.unwrap_or(LEGACY_SERIES_TIMEZONE).into(),
-            utc_offset_minutes: None,
-        };
-        if let (Ok(start), Ok(end)) = (scheduled.bound(false), scheduled.bound(true)) {
-            result.urgency = if now >= end {
-                Urgency::Overdue
-            } else if now >= start {
-                Urgency::Immediate
+        result.evidence = (
+            2,
+            if now >= plan.end {
+                plan.end
             } else {
-                Urgency::upcoming(start, now)
-            };
-            result.scheduled = Some(scheduled);
-            result.approaching(start, now, true);
-            result.boundary(start, now);
-            result.boundary(end, now);
+                plan.start
+            }
+            .timestamp_millis(),
+        );
+        if plan.occurrence {
+            result.scheduled = Some(plan.moment);
+        } else {
+            result.work_block = Some(plan.moment);
         }
+        result.approaching(plan.start, now, true);
+        result.boundary(immediate_at, now);
+        result.boundary(plan.start, now);
+        result.boundary(plan.end, now);
     }
     result
 }
@@ -295,6 +343,7 @@ struct Entry<'a> {
     placement: Placement<'a>,
     timing: Timing,
     visible: bool,
+    flags: u8,
 }
 
 pub(crate) struct Grid<'a> {
@@ -327,7 +376,7 @@ impl<'a> Grid<'a> {
                     .occurrence
                     .as_ref()
                     .and_then(|o| series_timezone(&o.series_id));
-                let timing = timing_at(task, now, timezone);
+                let timing = timing_resolved(task, &graph.facts[&task.id], now, timezone);
                 let visible = project.is_none_or(|filter| {
                     task.project_id.as_deref().is_some_and(|id| {
                         (filter == "all" || id == filter)
@@ -346,6 +395,7 @@ impl<'a> Grid<'a> {
                             urgency_from: None,
                             next: timing.next,
                         },
+                        flags: timing.flags,
                         timing,
                         visible,
                     },
@@ -355,19 +405,40 @@ impl<'a> Grid<'a> {
         // Each open dependent already has the priority of everything it blocks
         // by the time it is visited. Project and status filters affect display.
         for task in graph.dependents_first() {
-            let Some(source) = tasks.get(task.id.as_str()).map(|entry| entry.placement) else {
+            let Some((source, flags)) = tasks
+                .get(task.id.as_str())
+                .map(|entry| (entry.placement, entry.flags))
+            else {
                 continue;
             };
+            let source_id = source.urgency_from.unwrap_or(&task.id);
+            let source_evidence = tasks[source_id].timing.evidence;
             for id in &task.blocked_by {
+                let target_evidence = tasks.get(id.as_str()).map(|e| {
+                    tasks[e.placement.urgency_from.unwrap_or(id)]
+                        .timing
+                        .evidence
+                });
                 let Some(entry) = tasks.get_mut(id.as_str()) else {
                     continue;
                 };
+                entry.flags |= flags;
                 let target = &mut entry.placement;
-                if source.importance.rank() > target.importance.rank() {
+                if source.importance.rank() > target.importance.rank()
+                    || source.importance == target.importance
+                        && target
+                            .importance_from
+                            .is_some_and(|old| source.importance_from.unwrap_or(&task.id) < old)
+                {
                     target.importance = source.importance;
                     target.importance_from = source.importance_from.or(Some(&task.id));
                 }
-                if source.urgency > target.urgency {
+                if source.urgency > target.urgency
+                    || source.urgency == target.urgency
+                        && (Some(source_evidence) < target_evidence
+                            || Some(source_evidence) == target_evidence
+                                && target.urgency_from.is_some_and(|old| source_id < old))
+                {
                     target.urgency = source.urgency;
                     target.urgency_from = source.urgency_from.or(Some(&task.id));
                 }
@@ -412,6 +483,7 @@ impl<'a> Grid<'a> {
     }
     pub fn summary(&self, graph: &Graph, snapshot: String, evaluated_at: &str) -> Value {
         let mut counts = [[Counts::default(); 7]; 7];
+        let mut timing_counts = [[[Counts::default(); 8]; 7]; 7];
         for (id, entry) in self.tasks.iter().filter(|(_, entry)| entry.visible) {
             let Placement {
                 importance,
@@ -419,8 +491,10 @@ impl<'a> Grid<'a> {
                 ..
             } = entry.placement;
             counts[importance.rank() as usize][urgency as usize].add(graph.tasks[*id].status);
+            timing_counts[importance.rank() as usize][urgency as usize][entry.flags as usize]
+                .add(graph.tasks[*id].status);
         }
-        json!({"kind":SUMMARY,"counts":counts,"snapshot":snapshot,
+        json!({"kind":SUMMARY,"counts":counts,"timing_counts":timing_counts,"snapshot":snapshot,"policy":crate::priority_policy::POLICY,
                "evaluated_at":evaluated_at,"next_change_at":self.next_change_at})
     }
     pub fn includes(&self, task: &Task, cell: Cell) -> bool {
@@ -428,6 +502,9 @@ impl<'a> Grid<'a> {
             placement.importance == cell.importance
                 && placement.urgency == cell.urgency
                 && cell.scope.includes(task.status)
+                && cell
+                    .timing
+                    .includes(self.tasks[task.id.as_str()].flags, placement.urgency)
         })
     }
     fn placement(&self, id: &str) -> Option<Placement<'a>> {
@@ -516,6 +593,8 @@ impl<'a> Grid<'a> {
         let timing = &self.tasks[placement.urgency_from.unwrap_or(&task.id)].timing;
         let mut row = json!({"id":task.id,"title":task.title,"status":task.status,
                              "work_block":timing.work_block,
+                             "timing_flags":self.tasks[task.id.as_str()].flags,
+                             "effective_deadline":timing.deadline,"deadline_project":timing.project,
                              "priority_from":priority_from.map(source)});
         if let Some(id) = placement
             .urgency_from
@@ -831,6 +910,7 @@ mod tests {
                 importance,
                 urgency,
                 scope: Scope::Next,
+                timing: TimingFilter::All,
             };
             assert!(grid.includes(&root, cell));
             let summary = grid.summary(&graph, "snapshot".into(), instant);

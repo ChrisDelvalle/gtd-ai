@@ -271,7 +271,7 @@ impl AccountTransaction<'_> {
     ) -> Result<Cursor> {
         if let Some(encoded) = encoded {
             let c = Cursor::decode(encoded)?;
-            if c.version != 2
+            if c.version != 3
                 || c.compatibility != COMPATIBILITY
                 || c.account != self.account.id
                 || c.identity != self.identity
@@ -292,7 +292,7 @@ impl AccountTransaction<'_> {
             Ok(c)
         } else {
             Ok(Cursor {
-                version: 2,
+                version: 3,
                 compatibility: COMPATIBILITY,
                 account: self.account.id,
                 identity: self.identity,
@@ -428,6 +428,7 @@ impl AccountTransaction<'_> {
             }
         }
         Ok(ListResult {
+            effective_sort: input.effective_sort().into(),
             blocking_counts: if input.agent_context {
                 Default::default()
             } else {
@@ -500,6 +501,7 @@ impl AccountTransaction<'_> {
     ) -> Result<Value> {
         let exact = input.project_id.is_some();
         let filter = ListItems {
+            sort: input.sort,
             query: input.query,
             task_id: input.project_id,
             status: input.status.map(Into::into).or(

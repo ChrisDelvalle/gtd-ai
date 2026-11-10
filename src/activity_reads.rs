@@ -157,12 +157,34 @@ impl Store {
     }
     pub fn request_results(&self, q: ResultsQuery) -> Result<Value> {
         let ids = requests(&self.connection, &q.from_request_ids)?;
+        let key = json!({"requests":q.from_request_ids,"sort":q.sort});
+        let base = q
+            .snapshot
+            .as_deref()
+            .map(|s| reads::decode(&self.connection, s))
+            .transpose()?;
+        if base
+            .as_ref()
+            .is_some_and(|b| b.phase != "request_results" || b.query["requests"] != key["requests"])
+        {
+            return Err(StoreError::ResetRequired);
+        }
         let mut cursor = snapshot(
             &self.connection,
             q.cursor.as_deref(),
             "request_results",
-            reads::query_key(&q)?,
+            key,
         )?;
+        if let Some(base) = base {
+            if q.cursor.is_some()
+                && (cursor.high != base.high || cursor.evaluated_at != base.evaluated_at)
+            {
+                return Err(StoreError::ResetRequired);
+            }
+            cursor.high = base.high;
+            cursor.anchor = base.anchor;
+            cursor.evaluated_at = base.evaluated_at;
+        }
         let original = reads::encode(&reads::Cursor {
             position: 0,
             ..cursor.clone()
@@ -171,7 +193,12 @@ impl Store {
         if !(1..=100).contains(&max) {
             return Err(StoreError::Invalid("limit must be 1–100".into()));
         }
-        let mut stmt=self.connection.prepare("SELECT document FROM revisions WHERE entity_id IN (SELECT value FROM json_each(?1)) AND seq IN (SELECT MAX(seq) FROM revisions WHERE seq<=?2 GROUP BY entity_id) ORDER BY seq DESC,entity_id LIMIT ?3 OFFSET ?4")?;
+        let order = if q.sort == Some(crate::activity::ResultsSort::Title) {
+            "gtd_title(document),entity_id"
+        } else {
+            "seq DESC,entity_id"
+        };
+        let mut stmt=self.connection.prepare(&format!("SELECT document FROM revisions WHERE entity_id IN (SELECT value FROM json_each(?1)) AND seq IN (SELECT MAX(seq) FROM revisions WHERE seq<=?2 GROUP BY entity_id) ORDER BY {order} LIMIT ?3 OFFSET ?4"))?;
         let rows = stmt
             .query_map(
                 params![
@@ -205,7 +232,7 @@ impl Store {
         }
         cursor.position += records.len() as u64;
         Ok(
-            json!({"app":"gtd","view":"results","records":records,"from_request_ids":q.from_request_ids,"next_cursor":more.then(||reads::encode(&cursor)),"snapshot":original,"evaluated_at":cursor.evaluated_at,"response_version":2}),
+            json!({"app":"gtd","view":"results","records":records,"from_request_ids":q.from_request_ids,"next_cursor":more.then(||reads::encode(&cursor)),"snapshot":original,"evaluated_at":cursor.evaluated_at,"response_version":2,"sort":q.sort.unwrap_or(crate::activity::ResultsSort::ResultOrder)}),
         )
     }
 }

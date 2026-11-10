@@ -18,6 +18,7 @@ pub mod recurrence_model;
 
 pub mod planning;
 mod priority_grid;
+pub mod priority_policy;
 
 pub mod task_planning;
 

@@ -71,9 +71,14 @@ impl Snapshot {
                     UNION SELECT d.prerequisite_id FROM gtd.dependencies d
                     JOIN needed q ON q.id=d.task_id WHERE d.account_id=$1
                  ), bounded AS MATERIALIZED (SELECT id FROM needed LIMIT $3),
-                 fits AS (SELECT count(*) < $3 AS small FROM bounded)
-                 SELECT {RANK_DOCUMENT}, 0::bigint, NULL::text
-                 FROM bounded JOIN gtd.tasks t USING (id)
+                 fits AS (SELECT count(*) < $3 AS small FROM bounded),
+                 metadata(id) AS (
+                    SELECT id FROM bounded
+                    UNION SELECT document::jsonb->>'project_id' FROM gtd.tasks t JOIN bounded USING(id) WHERE t.account_id=$1
+                    UNION SELECT document::jsonb #>> '{{occurrence,series_id}}' FROM gtd.tasks t JOIN bounded USING(id) WHERE t.account_id=$1
+                 )
+                 SELECT {RANK_DOCUMENT}, 0::bigint, CASE WHEN t.entity_type='recurrence' THEN document::jsonb #>> '{{recurrence,timezone}}' END
+                 FROM metadata JOIN gtd.tasks t USING (id)
                  WHERE t.account_id=$1 AND (SELECT small FROM fits)
                  UNION ALL SELECT NULL, 0::bigint, NULL::text WHERE NOT (SELECT small FROM fits)"
             );
@@ -153,7 +158,7 @@ impl Snapshot {
             .filter(|at_bound| *at_bound > at)
             .min()
             .map(|v| v.to_rfc3339_opts(chrono::SecondsFormat::Millis, true));
-        let rankings = graph.rankings(at);
+        let rankings = graph.rankings_with_timezones(at, &series_timezones);
         Ok(Self {
             high,
             evaluated_at,
@@ -272,12 +277,13 @@ impl Snapshot {
                 .map(|at| planning::evaluate(task, at.with_timezone(&Utc)))
         });
         if let Some(r) = task.recommendation.as_mut() {
+            r.revision = Some(self.high);
             r.next_change_at = next.clone();
         }
     }
     fn compare(&self, a: &Node, b: &Node, input: &ListItems, kind: EntityType) -> Ordering {
         let (a_task, b_task) = (&a.task, &b.task);
-        let review = if input.review_on.is_some() {
+        let review = if input.effective_sort() == "review" {
             a_task.review_date.cmp(&b_task.review_date)
         } else {
             Ordering::Equal
@@ -309,6 +315,25 @@ impl Snapshot {
                             .map_or(3, planning::Importance::rank),
                     ),
                 "due" => planning::due_key(a_task).cmp(&planning::due_key(b_task)),
+                "effective_due" => self
+                    .graph
+                    .facts
+                    .get(&a_task.id)
+                    .map(|f| f.due_key())
+                    .unwrap_or(i64::MAX)
+                    .cmp(
+                        &self
+                            .graph
+                            .facts
+                            .get(&b_task.id)
+                            .map(|f| f.due_key())
+                            .unwrap_or(i64::MAX),
+                    ),
+                "created_desc" => b.created.cmp(&a.created),
+                "title" => a_task
+                    .title
+                    .to_lowercase()
+                    .cmp(&b_task.title.to_lowercase()),
                 "updated" => b_task.last_change_id.cmp(&a_task.last_change_id),
                 _ => Ordering::Equal,
             })

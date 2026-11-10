@@ -47,6 +47,7 @@ pub(crate) struct Graph {
     pub tasks: BTreeMap<String, Task>,
     // Dependents precede prerequisites, allowing a single pass for inherited rank.
     order: Vec<String>,
+    pub(crate) facts: HashMap<String, crate::priority_policy::Facts>,
 }
 impl Graph {
     pub fn new(tasks: Vec<Task>) -> Result<Self> {
@@ -99,7 +100,23 @@ impl Graph {
                 "Dependencies form a cycle; remove a link before saving".into(),
             ));
         }
-        Ok(Self { tasks, order })
+        let facts = tasks
+            .values()
+            .map(|t| {
+                (
+                    t.id.clone(),
+                    crate::priority_policy::resolve(
+                        t,
+                        t.project_id.as_ref().and_then(|id| tasks.get(id)),
+                    ),
+                )
+            })
+            .collect();
+        Ok(Self {
+            tasks,
+            order,
+            facts,
+        })
     }
     pub fn unresolved(&self, task: &Task) -> Vec<String> {
         task.blocked_by
@@ -120,15 +137,46 @@ impl Graph {
         }
         counts
     }
+    #[cfg(any(test, feature = "benchmark-clock"))]
     pub fn rankings(
         &self,
         now: chrono::DateTime<Utc>,
     ) -> HashMap<String, crate::planning::Recommendation> {
+        let zones = self
+            .tasks
+            .values()
+            .filter_map(|t| {
+                t.recurrence
+                    .as_ref()
+                    .map(|s| (t.id.clone(), s.timezone.clone()))
+            })
+            .collect();
+        self.rankings_with_timezones(now, &zones)
+    }
+    pub fn rankings_with_timezones(
+        &self,
+        now: chrono::DateTime<Utc>,
+        zones: &HashMap<String, String>,
+    ) -> HashMap<String, crate::planning::Recommendation> {
         let mut ranks: HashMap<_, _> = self
             .tasks
             .values()
-            .map(|t| (t.id.clone(), crate::planning::evaluate(t, now)))
+            .map(|t| {
+                (
+                    t.id.clone(),
+                    crate::priority_policy::evaluate(
+                        t,
+                        &self.facts[&t.id],
+                        now,
+                        t.occurrence
+                            .as_ref()
+                            .and_then(|o| zones.get(&o.series_id))
+                            .map(String::as_str),
+                    ),
+                )
+            })
             .collect();
+        let own = ranks.clone();
         for id in &self.order {
             let task = &self.tasks[id];
             if !committed(task) {
@@ -146,13 +194,33 @@ impl Graph {
                     .chain(source.next_change_at.iter())
                     .min()
                     .cloned();
-                if source.key < target.key {
-                    *target = source.clone();
-                    target.source_task_id =
-                        Some(source.source_task_id.clone().unwrap_or_else(|| id.clone()));
+                let source_id = source.source_task_id.clone().unwrap_or_else(|| id.clone());
+                if source.key < target.key
+                    || (source.key == target.key
+                        && target
+                            .source_task_id
+                            .as_ref()
+                            .is_some_and(|old| source_id < *old))
+                {
+                    target.key = source.key.clone();
+                    target.reason = source.reason.clone();
+                    target.source_task_id = Some(source_id);
                 }
                 target.next_change_at = next;
             }
+        }
+        for (id, rank) in &mut ranks {
+            let t = &self.tasks[id];
+            let started = !t.archived
+                && t.status != Status::Done
+                && !t.occurrence.as_ref().is_some_and(|o| o.skipped)
+                && t.planning.started;
+            rank.key = format!(
+                "{}:{}:{}",
+                rank.key,
+                own[id].key,
+                if started { 0 } else { 1 }
+            );
         }
         ranks
     }

@@ -75,7 +75,7 @@ fn importance_and_timing_order_examples() {
     let key = |t: &Task| evaluate(t, fixed()).key;
     assert!(key(&high) < key(&distant));
     assert!(key(&soon) < key(&high2));
-    assert!(key(&block) < key(&high));
+    assert!(key(&high) < key(&block));
     assert!(key(&imminent) < key(&block));
     let normal = capture(
         &mut s,
@@ -111,14 +111,14 @@ fn time_boundaries_and_start_confirmation() {
     );
     assert!(evaluate(&t, fixed()).reason.contains("Start by"));
     let before = evaluate(&t, "2026-10-07T13:59:59Z".parse().unwrap());
-    assert!(before.key.starts_with("2:"));
+    assert!(evaluate(&t, fixed()).key < before.key);
     let started = edit(&mut s, &t, "start-confirm", json!({"started":true})).task;
     assert_eq!(started.planning.start_by, t.planning.start_by);
     assert!(started.planning.started_at.is_none());
     assert_eq!(started.status, Status::Next);
     assert!(!evaluate(&started, fixed()).reason.contains("Start by"));
     let reset = edit(&mut s, &started, "start-reset", json!({"started":false})).task;
-    assert!(evaluate(&reset, fixed()).key.starts_with("0:"));
+    assert!(evaluate(&reset, fixed()).key < evaluate(&started, fixed()).key);
     let dated = edit(
         &mut s,
         &reset,
