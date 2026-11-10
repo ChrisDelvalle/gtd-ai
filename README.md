@@ -10,7 +10,7 @@ the last one stopped.
 GTD combines a Getting Things Done workflow with a shared website and interactive
 MCP app for ChatGPT and Claude. Each invited user has a separate account.
 
-![GTD Home with fictional tasks and the priorities chart](docs/images/home.png)
+![GTD Home and the priorities chart](docs/images/home.png)
 
 ## Why use it?
 
@@ -27,10 +27,7 @@ MCP app for ChatGPT and Claude. Each invited user has a separate account.
 - **Your infrastructure.** PostgreSQL holds authoritative data; search is derived.
   Invitations and per-account authorization keep personal task lists separate.
 
-![Shared interactive task card with fictional content](docs/images/widget.png)
-
-The screenshots use disposable fictional data. The card is rendered in the
-deterministic host harness; host-specific chrome is not shown.
+![Interactive GTD task card](docs/images/widget.png)
 
 ## Get started
 
@@ -91,8 +88,7 @@ service. Email delivery, clustering, and automatic failover are not included.
 
 The tested Keycloak build includes a small pinned upstream compatibility patch
 for resource-bound offline token renewal. [Build details](deploy/keycloak/README.md)
-explain the dependency and verification requirements. Browser-host behavior can
-vary; see the [release readiness record](docs/release-readiness.md).
+explain the dependency and verification requirements.
 
 Self-hosting controls storage. If you connect an AI service, data returned to it
 can enter its conversations and processing. See the [security model](docs/security.md).
@@ -100,8 +96,7 @@ can enter its conversations and processing. See the [security model](docs/securi
 ## Contributing and license
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and
-[the documentation index](docs/README.md). Deterministic tests use disposable data;
-no ordinary test command invokes a model or accesses a live installation.
+[the documentation index](docs/README.md).
 
 Copyright © 2026 Chris Delvalle. Licensed under [AGPL-3.0-only](LICENSE).
 Third-party components retain their own licenses; see [NOTICE](NOTICE).
