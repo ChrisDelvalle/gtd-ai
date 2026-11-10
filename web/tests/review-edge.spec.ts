@@ -241,20 +241,20 @@ test("focused filters close on a second click, preserve settings, and return foc
     exact: true,
   });
   await trigger.click();
-  await panel.getByRole("combobox", { name: "Sort tasks" }).selectOption("due");
+  await panel.getByRole("combobox", { name: "Maximum effort" }).selectOption("low");
   await panel.press("Escape");
   await expect(panel).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await expect(panel.getByRole("combobox", { name: "Sort tasks" })).toHaveValue(
-    "due",
+  await expect(panel.getByRole("combobox", { name: "Maximum effort" })).toHaveValue(
+    "low",
   );
   await trigger.click();
   await expect(panel).toHaveCount(0);
   await expect(trigger).toBeFocused();
   await trigger.click();
-  await expect(panel.getByRole("combobox", { name: "Sort tasks" })).toHaveValue(
-    "due",
+  await expect(panel.getByRole("combobox", { name: "Maximum effort" })).toHaveValue(
+    "low",
   );
 });
 

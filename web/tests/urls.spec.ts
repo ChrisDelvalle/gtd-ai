@@ -10,11 +10,11 @@ test("website URLs restore destination and filters through reload and browser hi
     .click();
   await expect(page).toHaveURL(/\/tasks\?/);
   await page
-    .getByRole("button", { name: "Sort and filter tasks", exact: true })
+    .getByRole("button", { name: "Sort: Recommended", exact: true })
     .click();
   await page
-    .getByRole("combobox", { name: "Sort tasks", exact: true })
-    .selectOption("importance");
+    .getByRole("menuitemradio", { name: "Importance", exact: true })
+    .click();
   await expect(page).toHaveURL(/sort=importance/);
   await page.keyboard.press("Escape");
   await page
@@ -28,12 +28,9 @@ test("website URLs restore destination and filters through reload and browser hi
     page.getByRole("heading", { name: "All tasks", exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page
-    .getByRole("button", { name: "Sort and filter tasks", exact: true })
-    .click();
   await expect(
-    page.getByRole("combobox", { name: "Sort tasks", exact: true }),
-  ).toHaveValue("importance");
+    page.getByRole("button", { name: "Sort: Importance", exact: true }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.goForward();
   await expect(page).toHaveURL(/\/projects$/);

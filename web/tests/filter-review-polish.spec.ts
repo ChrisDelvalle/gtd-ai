@@ -16,7 +16,7 @@ test("pointer focus is quiet while keyboard focus remains visible in shared filt
   const trigger = page.getByRole("button", {name: /^Sort and filter tasks/});
   await trigger.click();
   const panel = page.getByRole("dialog", {name: "Sort and filter tasks"});
-  const sort = panel.getByRole("combobox", {name: "Sort tasks"});
+  const sort = panel.getByRole("combobox", {name: "Maximum effort"});
   await sort.click();
   expect(await sort.evaluate(e => getComputedStyle(e).outlineStyle)).toBe("none");
   await page.keyboard.press("Escape");
@@ -56,37 +56,36 @@ for (const width of [320, 390, 1280])
       });
       await page.goto("/");
       await navigate(page, "All tasks");
+      await page.getByRole("button", {name: "Sort: Recommended", exact: true}).click();
+      await page.getByRole("menuitemradio", {name: "Importance", exact: true}).click();
       await page
         .getByRole("button", { name: /^Sort and filter tasks/ })
         .click();
       const panel = page.getByRole("dialog", { name: "Sort and filter tasks" });
       for (const label of [
-        "Due from",
-        "Due through",
+        "Task deadline from",
+        "Task deadline through",
         "Planned from",
         "Planned through",
       ]) {
         await expect(panel.getByLabel(label, { exact: true })).toHaveValue("");
       }
       await expect(panel.getByText("Any date", { exact: true })).toHaveCount(4);
-      await panel.getByLabel("Due from", { exact: true }).fill("2026-10-01");
-      await panel.getByLabel("Due through", { exact: true }).fill("2026-10-31");
+      await panel.getByLabel("Task deadline from", { exact: true }).fill("2026-10-01");
+      await panel.getByLabel("Task deadline through", { exact: true }).fill("2026-10-31");
       await panel
         .getByLabel("Planned from", { exact: true })
         .fill("2026-10-02");
       await panel
         .getByLabel("Planned through", { exact: true })
         .fill("2026-10-30");
-      await panel
-        .getByRole("combobox", { name: "Sort tasks" })
-        .selectOption("importance");
       await page.screenshot({
         animations: "disabled",
         path: info.outputPath("filters-populated.png"),
       });
       for (const [field, label] of [
-        ["due_from", "Due from"],
-        ["due_through", "Due through"],
+        ["due_from", "Task deadline from"],
+        ["due_through", "Task deadline through"],
         ["planned_from", "Planned from"],
         ["planned_through", "Planned through"],
       ]) {
@@ -106,19 +105,19 @@ for (const width of [320, 390, 1280])
         ).toHaveCount(0);
         if (field === "due_from")
           await expect(
-            panel.getByLabel("Due through", { exact: true }),
+            panel.getByLabel("Task deadline through", { exact: true }),
           ).toHaveValue("2026-10-31");
       }
-      await panel.getByLabel("Due from", { exact: true }).fill("2026-10-01");
+      await panel.getByLabel("Task deadline from", { exact: true }).fill("2026-10-01");
       await panel.getByLabel("Done", { exact: true }).uncheck();
       await panel
         .getByRole("button", { name: "Clear filters", exact: true })
         .click();
-      await expect(panel.getByLabel("Due from", { exact: true })).toHaveValue(
+      await expect(panel.getByLabel("Task deadline from", { exact: true })).toHaveValue(
         "",
       );
       await expect(panel.getByLabel("Done", { exact: true })).toBeChecked();
-      await expect(panel.getByLabel("Sort tasks")).toHaveValue("importance");
+      await expect(page.getByRole("button", {name: "Sort: Importance", exact: true})).toBeVisible();
       const fields = await panel
         .locator(".filter-date-control")
         .evaluateAll((es) =>
@@ -130,8 +129,8 @@ for (const width of [320, 390, 1280])
         expect(fields[0].width).toBe(fields[1].width);
       }
       expect(
-        await panel
-          .getByLabel("Sort tasks")
+        await page
+          .getByRole("button", {name: "Sort: Importance", exact: true})
           .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
       ).toBeLessThanOrEqual(14);
       expect(

@@ -184,17 +184,17 @@ for (const width of [320, 640]) {
     for (const box of dates) expect(Math.abs(box.width - dates[0].width)).toBeLessThan(1);
     if (width >= 360) { expect(dates[0].y).toBe(dates[1].y); expect(dates[2].y).toBe(dates[3].y); }
     await panel
-      .getByRole("textbox", { name: "Due from", exact: true })
+      .getByRole("textbox", { name: "Task deadline from", exact: true })
       .fill("2026-10-01");
     await panel
-      .getByRole("textbox", { name: "Due through", exact: true })
+      .getByRole("textbox", { name: "Task deadline through", exact: true })
       .fill("2026-10-30");
     await panel
-      .getByRole("combobox", { name: "Sort tasks" })
-      .selectOption("due");
+      .getByRole("combobox", { name: "Maximum effort" })
+      .selectOption("low");
     await panel.getByRole("checkbox", { name: "Undated", exact: true }).check();
     await expect(
-      panel.getByRole("textbox", { name: "Due from", exact: true }),
+      panel.getByRole("textbox", { name: "Task deadline from", exact: true }),
     ).toHaveValue("");
     await panel.getByRole("button", { name: "Clear filters" }).click();
     await panel.press("Escape");

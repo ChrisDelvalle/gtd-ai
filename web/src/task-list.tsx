@@ -141,6 +141,7 @@ export function TaskList({
   useEffect(() => () => preparation?.dispose(), [preparation]);
   const [error, setError] = useState(hostError),
     [busy, setBusy] = useState(false);
+  const searchHeight = useRef(0);
   const [search, setSearch] = useState(false),
     [filters, setFilters] = useState(false),
     [controlsOpened, setControlsOpened] = useState(false);
@@ -244,6 +245,7 @@ export function TaskList({
     setRecover(false);
   }, [hostError]);
   const argsKey = JSON.stringify(args);
+  const explicitChange = useRef(false);
   // The host already provided the first card result. Subsequent discovery/refresh uses identical filters.
   const first = useRef(true),
     previousRevision = useRef(revision);
@@ -270,6 +272,8 @@ export function TaskList({
     if (recheck && initial) void refresh(input);
   }, [recheck, initial]);
   async function refresh(requested = latestArgs.current, fresh = false) {
+    const deferReorder = !explicitChange.current;
+    explicitChange.current = false;
     if (fresh)
       requested = {
         ...requested,
@@ -337,7 +341,7 @@ export function TaskList({
       const commit = () => {
         if (gen !== generation.current) return;
         if (result && (fresh || environment.embedded) &&
-            (controller.snapshot().intents.size || interactionInProgress())) {
+            (controller.snapshot().intents.size || (deferReorder && interactionInProgress()))) {
           deferred.current = setTimeout(commit, 150);
           return;
         }
@@ -391,6 +395,11 @@ export function TaskList({
     const requested = { ...next, cursor: undefined, offset: 0 };
     if (!next.query) nonSearchSort.current = next.sort as string | undefined;
     generation.current++;
+    explicitChange.current = true;
+    // An explicit search/filter changes membership. Never present the old
+    // query's rows as matches. Sorting the same membership stays warm.
+    const membership = ({sort: _sort, cursor: _cursor, offset: _offset, ...query}: Args) => JSON.stringify(query);
+    if (environment.embedded && membership(requested) !== membership(args)) setResult(null);
     setVisible(compact ? 5 : 20);
     pages.current = [];
     setPreviewPage(0);
@@ -715,9 +724,10 @@ export function TaskList({
         ref={searchAnchor}
         label="Search tasks"
         aria-expanded={search}
-        onClick={() => {
+        onClick={(event) => {
           setFilters(false);
           setScopeMenu(false);
+          searchHeight.current = event.currentTarget.closest(".compact-toolbar")?.getBoundingClientRect().height || 0;
           setSearch(!search);
         }}
       >
@@ -758,7 +768,7 @@ export function TaskList({
     </>
   );
   const toolbar = (
-    <div className="compact-toolbar">
+    <div className="compact-toolbar" style={search && searchHeight.current ? {minHeight: searchHeight.current} : undefined}>
       <div className="list-controls" id={controlsId} hidden={!toolbarVisible}>
         {compact && search ? (
           searchField

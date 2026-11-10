@@ -173,8 +173,7 @@ for (const mobile of [false, true]) {
       const first = page.locator(".compact-row").first();
       const before = await rect(first);
       const filter = page.getByRole("button", {
-        name: "Sort and filter tasks",
-        exact: true,
+        name: /^Sort and filter tasks/,
       });
       await filter.click();
       const panel = page.getByRole("dialog", { name: "Sort and filter tasks" });
@@ -182,8 +181,8 @@ for (const mobile of [false, true]) {
       expect(await rect(first)).toEqual(before);
       await fits(panel, mobile ? 390 : 1280, mobile ? 844 : 900);
       await panel
-        .getByRole("combobox", { name: "Sort tasks" })
-        .selectOption("due");
+        .getByRole("combobox", { name: "Maximum effort" })
+        .selectOption("low");
       await expect(panel).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(filter).toBeFocused();
