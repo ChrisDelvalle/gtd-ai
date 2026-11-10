@@ -17,6 +17,7 @@ function Card({ store }: { store: DemoStore }) {
   const [mode, setMode] = useState<"inline" | "fullscreen">("inline");
   const [height, setHeight] = useState(innerHeight);
   const [theme, setTheme] = useState("dark");
+  const [restoreFocus, setRestoreFocus] = useState(false);
   const [script, setScript] = useState<ReturnType<typeof runScenario> | null>(
     null,
   );
@@ -34,12 +35,7 @@ function Card({ store }: { store: DemoStore }) {
         setMode(e.data.mode === "fullscreen" ? "fullscreen" : "inline");
         setTheme(e.data.theme === "light" ? "light" : "dark");
       }
-      if (e.data.type === "restore-focus")
-        requestAnimationFrame(() =>
-          document
-            .querySelector<HTMLButtonElement>(".widget-expand")
-            ?.focus({ preventScroll: true }),
-        );
+      if (e.data.type === "restore-focus") setRestoreFocus(true);
       if (e.data.type === "run" && !ran) {
         ran = true;
         try {
@@ -78,6 +74,16 @@ function Card({ store }: { store: DemoStore }) {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+  useEffect(() => {
+    if (!restoreFocus || mode !== "inline") return;
+    const frame = requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLButtonElement>(".widget-expand")
+        ?.focus({ preventScroll: true });
+      setRestoreFocus(false);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mode, restoreFocus]);
   useEffect(() => {
     const observer = new ResizeObserver(() => {
       if (mode === "inline") {

@@ -39,8 +39,6 @@ export function useSurfaceHeight(
       }
     };
     resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(body);
     // React can hide an outgoing route and reveal one of the same final size
     // in one commit. WebKit may coalesce that resize, leaving a measurement of
     // the temporary loading state. Reconcile layout-changing DOM commits too.
@@ -48,6 +46,10 @@ export function useSurfaceHeight(
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(() => { frame = 0; resize(); });
     };
+    // Height writes during observer delivery can trigger another resize in
+    // WebKit. Coalesce them with the existing next-frame measurement path.
+    const observer = new ResizeObserver(schedule);
+    observer.observe(body);
     const commits = new MutationObserver(records => {
       if (records.some(record => {
         const element = record.target instanceof Element ? record.target : record.target.parentElement;

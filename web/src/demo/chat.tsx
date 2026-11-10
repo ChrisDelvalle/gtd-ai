@@ -11,6 +11,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { scenarios, type ScenarioId } from "./scenarios";
+import { StreamedReply } from "./streamed-reply";
 type Progress = {
   sent: boolean;
   response: string;
@@ -230,11 +231,7 @@ function Chat() {
                   <>
                     <div className="user-message">{s.prompt}</div>
                     <div className="assistant-message">
-                      {p.response ? (
-                        p.response
-                          .split("\n\n")
-                          .map((text, i) => <p key={i}>{text}</p>)
-                      ) : (
+                      {!p.response && !p.error && (
                         <p role="status">Opening GTD…</p>
                       )}
                       {p.error && (
@@ -245,32 +242,42 @@ function Chat() {
                           </button>
                         </p>
                       )}
-                      <div className="tool-caption">
-                        <PanelTop size={17} />
-                        <span>Opened GTD</span>
-                      </div>
                       <div
-                        className="inline-card-slot"
-                        style={{ height: p.height }}
+                        className="chat-result"
+                        data-ready={!!p.response || undefined}
+                        inert={!p.response}
                       >
-                        <iframe
-                          className={
-                            expanded === s.id
-                              ? "demo-frame expanded-frame"
-                              : "demo-frame"
-                          }
-                          title={`GTD widget — ${s.title}`}
-                          src={`../widget/#${s.id}`}
-                          ref={(node) => {
-                            if (node) frames.current.set(s.id, node);
-                            else frames.current.delete(s.id);
-                          }}
-                          style={{
-                            height: expanded === s.id ? undefined : p.height,
-                          }}
-                          allow="clipboard-write"
-                        />
+                        <div className="chat-result-body">
+                          <div className="tool-caption">
+                            <PanelTop size={17} />
+                            <span>Opened GTD</span>
+                          </div>
+                          <div
+                            className="inline-card-slot"
+                            style={{ height: p.height }}
+                          >
+                            <iframe
+                              className={
+                                expanded === s.id
+                                  ? "demo-frame expanded-frame"
+                                  : "demo-frame"
+                              }
+                              title={`GTD widget — ${s.title}`}
+                              src={`../widget/#${s.id}`}
+                              ref={(node) => {
+                                if (node) frames.current.set(s.id, node);
+                                else frames.current.delete(s.id);
+                              }}
+                              style={{
+                                height:
+                                  expanded === s.id ? undefined : p.height,
+                              }}
+                              allow="clipboard-write"
+                            />
+                          </div>
+                        </div>
                       </div>
+                      {p.response && <StreamedReply text={p.response} />}
                     </div>
                   </>
                 )}
@@ -286,21 +293,14 @@ function Chat() {
               send();
             }}
           >
-            <label className="composer-label" htmlFor="prepared-prompt">
-              {progress[current].sent
-                ? "Explore the card, or choose another chat"
-                : "Prepared example"}
-            </label>
             <textarea
               id="prepared-prompt"
               aria-label="Prepared example prompt"
               readOnly
               value={progress[current].sent ? "" : script.prompt}
               rows={progress[current].sent ? 1 : 3}
-              placeholder="The card is yours to explore"
             />
             <div className="composer-actions">
-              <span>Browser-local demo</span>
               <button
                 type="submit"
                 aria-label="Send prepared example"

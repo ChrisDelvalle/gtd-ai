@@ -28,7 +28,7 @@ export function runScenario(
   if (id === "pickup")
     return {
       response:
-        "Start with the exception replay. It's only 15 minutes, but it unlocks the critical refund check due at 2:30; that check's 12:45 start-by has already passed. The winter pickup authorization is also overdue and should take about 12 minutes.\n\nThe grid carries the refund check's priority back to the task blocking it. Click a square to see what's in it.",
+        "Start with the exception replay. It's only 15 minutes, but it unlocks the critical refund check due at 2:30; that check's 12:45 start-by has already passed. The winter pickup authorization is also overdue and should take about 12 minutes.",
       launch: { page: "Charts" },
     };
   if (id === "capture") {

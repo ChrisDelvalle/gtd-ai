@@ -343,3 +343,108 @@ test("failed fixture load offers a working local retry", async ({ page }) => {
     page.getByRole("region", { name: "Priorities chart" }),
   ).toBeVisible();
 });
+
+for (const width of [390, 1440]) {
+  test(`card opens before the reply streams at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`${base}/chat/`);
+    if (width === 390)
+      await page.getByRole("button", { name: "Use light theme" }).click();
+    expect(await page.locator(".chat-composer").innerText()).toBe("");
+    const typography = await page
+      .getByLabel("Prepared example prompt")
+      .evaluate((el) => {
+        const s = getComputedStyle(el);
+        return {
+          family: s.fontFamily,
+          size: s.fontSize,
+          weight: s.fontWeight,
+          line: s.lineHeight,
+          features: s.fontFeatureSettings,
+        };
+      });
+    expect(typography.family).toMatch(
+      /^-apple-system-body, ui-sans-serif, -apple-system, system-ui/,
+    );
+    expect(typography.size).toBe("16px");
+    expect(typography.weight).toBe("400");
+    expect(typography.line).toBe("26px");
+    expect(typography.features).toBe('"liga" 0');
+
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    const pickup = page.getByRole("region", {
+      name: "Before school pickup",
+      exact: true,
+    });
+    const reply = pickup.locator(".streamed-reply");
+    await expect(reply).toHaveAttribute("aria-busy", "true");
+    await expect(pickup.locator(".chat-result")).toBeVisible();
+    expect(
+      await pickup
+        .locator(".chat-result")
+        .evaluate((el) => !!el.nextElementSibling?.matches(".streamed-reply")),
+    ).toBe(true);
+    const first = await reply.textContent();
+    await expect
+      .poll(async () => (await reply.textContent())!.length, {
+        intervals: [20],
+      })
+      .toBeGreaterThan(first!.length);
+
+    const partial = await reply.textContent();
+    expect(partial!.length).toBeGreaterThan(first!.length);
+    expect(partial).not.toContain("about 12 minutes.");
+    await page.screenshot({ path: info.outputPath("streaming.png") });
+    if (width === 390)
+      await page
+        .getByRole("button", { name: "Open sidebar", exact: true })
+        .click();
+    await page
+      .getByRole("button", { name: "Twenty minutes, low energy", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    await expect(
+      page.locator(".chat-scroll:not([hidden]) .streamed-reply"),
+    ).toHaveAttribute("aria-busy", "true");
+    if (width === 390)
+      await page
+        .getByRole("button", { name: "Open sidebar", exact: true })
+        .click();
+    await page
+      .getByRole("button", { name: "Before school pickup", exact: true })
+      .click();
+    await expect(reply).toHaveAttribute("aria-busy", "false");
+    await expect(reply).toContainText("should take about 12 minutes.");
+    await expect(pickup.locator(".chat-result")).toBeVisible();
+    expect(
+      await pickup
+        .locator(".chat-result")
+        .evaluate((el) => getComputedStyle(el).transitionDuration),
+    ).toBe("0.38s, 0.24s");
+    expect(await page.locator(".chat-composer").innerText()).toBe("");
+    await page.screenshot({ path: info.outputPath("stream-complete.png") });
+  });
+}
+
+test("reduced motion skips streaming and card transitions", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`${base}/chat/#capture`);
+  await page.getByRole("button", { name: "Send prepared example" }).click();
+  await expect(page.locator(".streamed-reply")).toBeVisible();
+  expect(await page.locator(".streamed-reply").getAttribute("aria-busy")).toBe(
+    "false",
+  );
+  await expect(page.locator(".streamed-reply")).toContainText(
+    "No messages sent.",
+  );
+  await expect(page.locator(".chat-result")).toBeVisible();
+  expect(
+    await page
+      .locator(".chat-result")
+      .evaluate((el) => getComputedStyle(el).transitionDuration),
+  ).toBe("0s");
+});
