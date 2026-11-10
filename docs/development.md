@@ -25,6 +25,49 @@ fixtures. `gtd-account-server`, built with `postgres-storage`, is the authentica
 multi-user service. `postgres-operator` adds offline migration binaries; those
 are excluded from serving containers. `benchmark-clock` is a test-only clock.
 
+## Common commands
+
+`just` provides shortcuts for the existing scripts; it is optional. Run `just`
+for the list. Commands run from the repository root even when invoked inside a
+subdirectory.
+
+| Command | Purpose |
+| --- | --- |
+| `just setup` | Install locked frontend and adapter dependencies |
+| `just dev` | Build and serve a disposable local website on port 18081 |
+| `just demos` | Build and preview both static demos on port 4175 |
+| `just test-demos` | Build and check demo data and both browser engines |
+| `just check` | Rust, client, adapter, and deployment configuration checks |
+| `just test-browser [specs…]` | Chromium checks with disposable search |
+| `just test-browser-webkit [specs…]` | The same checks in WebKit |
+| `just images` | Build the full self-hosted deployment without starting it |
+
+The disposable website is removed when its server exits. The two demo URLs are
+`http://127.0.0.1:4175/gtd-ai/website/` and
+`http://127.0.0.1:4175/gtd-ai/chat/`. Install Playwright browsers below before
+running browser checks.
+
+For an existing local installation, `just deploy-local DATABASE_ID SERVICE_IMAGE
+ADAPTER_IMAGE [CONFIG]` delegates to the guarded same-schema upgrade command.
+Use immutable `sha256:` image IDs, take a verified backup first, and follow
+[operations](operations.md). It never discovers or connects to a remote server,
+creates accounts, migrates a schema, or bypasses the backup requirement.
+
+## CI runtime
+
+GitHub Actions caches npm downloads, Rust dependencies, the pinned advisory-checker
+binary, and expensive Docker build layers. A missing or evicted cache falls back
+to the normal build. Checks and installation rehearsals still run on every
+change, and no test retries are enabled. Docker cache exports are limited to the
+operator target, which also includes the service's Rust build, to avoid uploading
+the same layers from every image. They contain build artifacts, never installation
+configuration or test databases.
+
+Browser suites intentionally use one worker per engine: some integration tests
+share the disposable server. Parallelizing those before isolating their state
+would trade runtime for unreliable results. Chromium and WebKit already run in
+separate jobs.
+
 ## Browser and protocol tests
 
 ```sh

@@ -27,9 +27,17 @@ jobs:
         with:
           toolchain: '1.93.0'
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          key: source
+          cache-on-failure: true
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            adapter/package-lock.json
       - run: npm --prefix web ci && npm --prefix adapter ci
       - run: npm --prefix web run build
       - run: cp web/dist/widget-adapter.html adapter/widget.html
@@ -62,9 +70,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec
         with:
           toolchain: '1.93.0'
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          key: browsers
+          cache-on-failure: true
+          save-if: ${{ matrix.browser == 'chromium' }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            adapter/package-lock.json
       - run: npm --prefix web ci
       - run: npm --prefix web run build && cargo build --locked
       - run: bash scripts/prepare-browser-runner.sh
@@ -94,7 +111,17 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            adapter/package-lock.json
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        id: cargo-deny
+        with:
+          path: ~/.cargo/bin/cargo-deny
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-deny-0.19.7-rust-1.93
       - run: cargo install cargo-deny --version 0.19.7 --locked
+        if: steps.cargo-deny.outputs.cache-hit != 'true'
       - run: cargo deny check
       - run: npm --prefix web ci && npm --prefix adapter ci
       - run: npm --prefix web audit && npm --prefix adapter audit
@@ -107,7 +134,15 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y restic
-      - run: python3 deploy/build.py
+      - uses: docker/setup-docker-action@e43656e248c0bd0647d3f5c195d116aacf6fcaf4 # v4
+        with:
+          daemon-config: '{"features":{"containerd-snapshotter":true}}'
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/gtd-build-cache/current
+          key: ${{ runner.os }}-${{ runner.arch }}-images-v1-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'src/**', 'deploy/multi-user/Dockerfile', 'scripts/rust-notices.py', 'third_party/**', 'LICENSE', 'NOTICE') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-images-v1-
+      - run: python3 deploy/build.py --cache-dir "$RUNNER_TEMP/gtd-build-cache"
       - run: python3 scripts/test-installation.py
       - run: python3 scripts/test-operator-cli.py
 
@@ -124,6 +159,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            adapter/package-lock.json
       - run: npm --prefix web ci
       - run: npm --prefix web run build:demos
       - run: npm --prefix web run test:demos

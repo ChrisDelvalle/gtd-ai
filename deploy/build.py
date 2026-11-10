@@ -2,12 +2,20 @@
 """Build every deployment image from source; no installation credentials used."""
 
 from pathlib import Path
+import argparse
+import shutil
 import json
 import os
 import subprocess
 import sys
 import time
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument(
+    "--cache-dir", type=Path,
+    help="Optional external BuildKit layer cache (requires a compatible Docker driver)",
+)
+args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 revision = subprocess.run(
     ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True
@@ -47,11 +55,36 @@ actual = subprocess.check_output(
 ).strip()
 if actual != provenance["image_id"]:
     raise SystemExit("Patched identity image changed during build")
-subprocess.run(
-    ["docker", "compose", "-f", str(root / "compose.yaml"), "build"],
-    cwd=root,
-    check=True,
-)
+compose = ["docker", "compose", "-f", str(root / "compose.yaml")]
+if args.cache_dir:
+    cache = args.cache_dir.resolve()
+    cache.mkdir(parents=True, exist_ok=True)
+    # Only the operator target exports: it includes the expensive Rust service
+    # layers too. All application targets can reuse them without duplicate
+    # exports. Cache mounts are ephemeral; a miss always builds from source.
+    current, fresh = cache / "current", cache / "next"
+    if fresh.exists():
+        shutil.rmtree(fresh)
+    sources = [f"type=local,src={current}"] if (current / "index.json").exists() else []
+    override = {
+        "services": {
+            name: {"build": {"cache_from": sources}}
+            for name in ("service", "adapter", "operator")
+        }
+    }
+    override["services"]["operator"]["build"]["cache_to"] = [
+        f"type=local,dest={fresh},mode=max"
+    ]
+    cache_config = output / "compose-cache.json"
+    cache_config.write_text(json.dumps(override))
+    compose.extend(["-f", str(cache_config)])
+subprocess.run([*compose, "build"], cwd=root, check=True)
+if args.cache_dir:
+    # Replace instead of accumulating stale layers indefinitely. The previous
+    # cache remains intact if building or exporting failed.
+    if current.exists():
+        shutil.rmtree(current)
+    fresh.rename(current)
 print(
     "Built service, adapter, operator, identity and gateway images. No services started."
 )
