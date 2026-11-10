@@ -35,3 +35,8 @@
 *.key
 !tests/fixtures/identity/a.pem
 !tests/fixtures/identity/b.pem
+
+# Static demo artifacts and visual verification output
+/web/dist-demo/
+/web/demo-build-meta.json
+/web/demo-results/

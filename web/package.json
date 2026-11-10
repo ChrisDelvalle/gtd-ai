@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && node build.mjs",
-    "test": "node --experimental-transform-types --test mutations.test.ts coalesced-api.test.mjs environment-guard.test.mjs website-identity.test.mjs widget-identity.test.mjs && playwright test"
+    "test": "node --experimental-transform-types --test mutations.test.ts coalesced-api.test.mjs environment-guard.test.mjs website-identity.test.mjs widget-identity.test.mjs && playwright test",
+    "build:demos": "tsc --noEmit && node build-demos.mjs",
+    "demo:serve": "node demo/serve.mjs",
+    "test:demos": "node --test demo/*.test.mjs",
+    "test:demos:browser": "playwright test --config demo/playwright.config.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "2.0.3",

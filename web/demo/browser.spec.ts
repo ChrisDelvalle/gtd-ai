@@ -1,0 +1,261 @@
+import { test, expect } from "@playwright/test";
+const base = "/gtd-ai";
+test.beforeEach(async ({ page }) => {
+  await page.route("**/*", async (route) => {
+    const url = new URL(route.request().url());
+    expect(url.origin).toBe("http://127.0.0.1:4175");
+    expect(url.pathname).toMatch(
+      /^\/gtd-ai\/(assets\/|website\/|chat\/|widget\/)/,
+    );
+    expect(route.request().method()).toBe("GET");
+    await route.continue();
+  });
+});
+for (const width of [390, 800, 1280, 1440])
+  for (const dark of [false, true]) {
+    test(`website grid and overlays ${width} ${dark ? "dark" : "light"}`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(`${base}/website/`);
+      if (dark)
+        await page.getByRole("button", { name: "Use dark theme" }).click();
+      const chart = page.getByRole("region", { name: "Priorities chart" });
+      await expect(chart.locator(".priority-square")).toHaveCount(49);
+      await expect(
+        page.getByRole("button", {
+          name: "Critical, Overdue: 1 task",
+          exact: true,
+        }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      if (width === 390)
+        await expect(page.locator(".priority-importance-short")).toBeVisible();
+      if (width >= 1280) {
+        const geometry = await chart.evaluate((el) => {
+          const cells = el.querySelectorAll(".priority-square");
+          const a = cells[0].getBoundingClientRect(),
+            b = cells[6].getBoundingClientRect(),
+            pane = el.getBoundingClientRect();
+          return {
+            grid: (a.left + b.right) / 2,
+            pane: (pane.left + pane.right) / 2,
+          };
+        });
+        expect(Math.abs(geometry.grid - geometry.pane)).toBeLessThan(2);
+      }
+      await page.screenshot({ path: info.outputPath("website.png") });
+      await page
+        .getByRole("button", {
+          name: "Normal, Within 7 days: 4 tasks",
+          exact: true,
+        })
+        .click();
+      const modal = page.getByRole("dialog");
+      await expect(modal).toBeVisible();
+      await expect(modal.locator(".priority-task")).toHaveCount(4);
+      const before = await page.evaluate(() => window.scrollY);
+      await page.mouse.move(width - 5, 400);
+      await page.mouse.wheel(0, 600);
+      expect(await page.evaluate(() => window.scrollY)).toBe(before);
+      await page.screenshot({ path: info.outputPath("priority-modal.png") });
+      await page.getByRole("button", { name: "Close task list" }).click();
+      await expect(modal).not.toBeVisible();
+      await page
+        .getByRole("button", {
+          name: "Details: Prepare the scrubbed exception replay for the release gate",
+          exact: true,
+        })
+        .click();
+      await expect(
+        page.getByText(
+          "Stage a safe copy of the failing case so Maya can run the gate check.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+    });
+  }
+test("website edits, undo, history and reset remain local", async ({
+  page,
+}) => {
+  await page.goto(`${base}/website/`);
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await page
+    .getByLabel("Add to inbox", { exact: true })
+    .fill("Try the local demo");
+  await page.getByRole("button", { name: "Capture task", exact: true }).click();
+  await expect(
+    page.getByRole("region", {
+      name: "Task information: Try the local demo",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "More options: Try the local demo",
+      exact: true,
+    })
+    .click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const inspector = page.getByRole("region", { name: "Task details" });
+  await inspector
+    .getByRole("textbox", { name: "Notes", exact: true })
+    .fill("A visitor can edit the real fields.");
+  await inspector.getByRole("button", { name: "Save changes" }).click();
+  await expect(
+    inspector.getByRole("button", { name: "Save changes" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Undo last change" }).click();
+  await expect(
+    inspector.getByRole("textbox", { name: "Notes", exact: true }),
+  ).toHaveValue("");
+  await page.getByRole("button", { name: "Reset demo", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Priorities chart" }),
+  ).toBeVisible();
+  await page.goto(
+    `${base}/website/#/tasks?query=Try%20the%20local%20demo&view=all`,
+  );
+  await expect(
+    page.getByText("Try the local demo", { exact: true }),
+  ).toHaveCount(0);
+});
+for (const width of [390, 1440]) {
+  test(`scripted chats and retained expansion at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`${base}/chat/`);
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    let frame = page.frameLocator(
+      'iframe[title="GTD widget — Before school pickup"]',
+    );
+    await expect(
+      frame.getByRole("region", { name: "Priorities chart" }),
+    ).toBeVisible();
+    if (width === 1440)
+      await page
+        .getByRole("button", { name: "Close sidebar", exact: true })
+        .click();
+    await page.screenshot({ path: info.outputPath("chat-inline.png") });
+    await frame
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Close expanded view" }),
+    ).toBeVisible();
+    await expect(
+      frame.getByRole("button", {
+        name: "Critical, Overdue: 1 task",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.screenshot({ path: info.outputPath("chat-expanded.png") });
+    await frame
+      .getByRole("button", { name: "Critical, Overdue: 1 task", exact: true })
+      .click();
+    await expect(frame.getByRole("dialog")).toBeVisible();
+    await frame.getByRole("button", { name: "Close task list" }).click();
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await expect(
+      frame.getByRole("button", { name: "Expand view", exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Open sidebar", exact: true })
+      .click();
+    await page
+      .getByRole("button", {
+        name: "A few things before I forget",
+        exact: true,
+      })
+      .click();
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    frame = page.frameLocator(
+      'iframe[title="GTD widget — A few things before I forget"]',
+    );
+    await expect(
+      frame.getByRole("button", {
+        name: "Details: Ask Priya whether the refund test is still failing",
+        exact: true,
+      }),
+    ).toBeVisible();
+    if (width === 1440)
+      await page
+        .getByRole("button", { name: "Close sidebar", exact: true })
+        .click();
+    await frame
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await expect(
+      frame.getByRole("button", {
+        name: "Details: Consider a hook by the door for the library bag",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.screenshot({ path: info.outputPath("capture-results.png") });
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await page
+      .getByRole("button", { name: "Open sidebar", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Twenty minutes, low energy", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    frame = page.frameLocator(
+      'iframe[title="GTD widget — Twenty minutes, low energy"]',
+    );
+    await expect(
+      frame.getByRole("button", {
+        name: "Details: Refill the spare folder in Nico's bag",
+        exact: true,
+      }),
+    ).toBeVisible();
+    if (width === 1440)
+      await page
+        .getByRole("button", { name: "Close sidebar", exact: true })
+        .click();
+    await frame
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await page.screenshot({ path: info.outputPath("energy-results.png") });
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await page
+      .getByRole("button", { name: "Open sidebar", exact: true })
+      .click();
+    await page
+      .getByRole("button", {
+        name: "A few things before I forget",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Send prepared example" }),
+    ).toBeDisabled();
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Send prepared example" }),
+    ).toBeEnabled();
+  });
+}
+test("initial state ignores host time and timezone", async ({ browser }) => {
+  const outputs = [];
+  for (const timezoneId of ["America/New_York", "Asia/Tokyo"]) {
+    const context = await browser.newContext({ timezoneId });
+    const page = await context.newPage();
+    await page.clock.setFixedTime(new Date("2035-07-18T23:00:00Z"));
+    await page.goto(`${base}/website/`);
+    await expect(page.locator(".priority-square")).toHaveCount(49);
+    outputs.push(
+      await page
+        .locator(".priority-square")
+        .evaluateAll((cells) => cells.map((c) => c.getAttribute("aria-label"))),
+    );
+    await context.close();
+  }
+  expect(outputs[0]).toEqual(outputs[1]);
+});
