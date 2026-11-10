@@ -105,3 +105,12 @@ chart tests also exposed shared fixture collisions; their queries now use their
 own project, preserving real ranking and drilldown reads. Five successive WebKit
 chart runs pass after that change. No retries, forced clicks, or disabled checks
 were introduced.
+
+The full GitHub run `42784336439` passed on its first attempt, including both
+application browser suites, demo checks, source/PostgreSQL tests, installation,
+recovery, and operator CLI rehearsal. Pages published revision `66d0588`.
+The new cache exports total about 2.8 GiB (Rust source and browser dependencies,
+Docker layers, npm downloads, and the advisory-checker binary). Local `just dev`
+and `just demos` smoke checks served healthy loopback endpoints and were stopped;
+argument forwarding for `just deploy-local` was checked without invoking an
+installation. Production GTD services and data were not changed.
