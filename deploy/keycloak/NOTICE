@@ -1,7 +1,7 @@
 Keycloak offline resource-binding compatibility patch
 
 Derived from Keycloak 26.8.1 and upstream commit
-f8e6deabe95bc08109912cea3129ab1da6846ad2.
+4e4578e57544965d8691de42f1aa6b65075491e7.
 Copyright Red Hat, Inc. and/or its affiliates and other contributors.
 Licensed under the Apache License, Version 2.0.
 https://www.apache.org/licenses/LICENSE-2.0
