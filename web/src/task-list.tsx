@@ -776,9 +776,9 @@ export function TaskList({
           <>
             <div className="page-actions">
               {compact && (navigation || scopeSelector)}
-              {(compact || bare) && sortControl}
               {!previewPaging && pagination}
             </div>
+            {(compact || bare) && <div className="list-sort">{sortControl}</div>}
             {compact && <div className="view-actions">{utilities}</div>}
           </>
         )}

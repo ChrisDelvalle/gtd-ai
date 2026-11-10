@@ -407,3 +407,20 @@
 .widget .widget-surface .compact-widget[data-sort] > .compact-toolbar {
   height: auto;
 }
+@media (max-width: 440px) {
+  .widget .compact-widget[data-sort] > .compact-toolbar .list-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .widget .compact-widget[data-sort] > .compact-toolbar .view-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .widget .compact-widget[data-sort] > .compact-toolbar .list-sort {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .widget .compact-widget[data-sort] > .compact-toolbar .card-search {
+    grid-column: 1 / -1;
+  }
+}

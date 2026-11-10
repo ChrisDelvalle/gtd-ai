@@ -520,6 +520,9 @@ test("compact project receipts open full project cards and grouped actions throu
   await expect(
     card.getByText("The desired outcome is ready for review.", { exact: true }),
   ).toBeVisible();
+  // The bounded preview may clip the project actions below its summary and
+  // toolbar. Expand before interacting with those actions.
+  await card.getByRole("button", {name: "Expand view", exact: true}).click();
   await expect(
     card.getByRole("button", { name: `Details: ${task.title}`, exact: true }),
   ).toBeVisible();
