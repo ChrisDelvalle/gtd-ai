@@ -14,7 +14,7 @@ cd todo-mcp
 python3 deploy/build.py
 ```
 
-This builds the pinned Keycloak patch and all five application/operator images.
+This builds the [pinned Keycloak patch](../deploy/keycloak/README.md) and all five application/operator images.
 No private image registry or pre-existing installation is needed. It starts no
 services. Build logs and provenance go to ignored `artifacts/`.
 

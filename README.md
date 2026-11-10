@@ -79,20 +79,6 @@ The website and widget share React components. Rust owns task behavior,
 transactions, account isolation, and authorization. Keycloak owns sign-in and
 OAuth. Internal services listen on loopback; Caddy exposes only intended routes.
 
-## Limitations
-
-This is an actively maintained self-hosted project for separate personal accounts,
-not a team collaboration or hosted billing platform. Projects are not shared
-between users. Calendar links and work blocks do not constitute a calendar sync
-service. Email delivery, clustering, and automatic failover are not included.
-
-The tested Keycloak build includes a small pinned upstream compatibility patch
-for resource-bound offline token renewal. [Build details](deploy/keycloak/README.md)
-explain the dependency and verification requirements.
-
-Self-hosting controls storage. If you connect an AI service, data returned to it
-can enter its conversations and processing. See the [security model](docs/security.md).
-
 ## Contributing and License
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and
