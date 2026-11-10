@@ -198,7 +198,17 @@ export function runScenario(
     max_effort: "low",
     limit: 100,
   });
-  const ids = result.items.map((t: { id: string }) => t.id);
+  const shortlist = new Set([
+    "Refill the spare folder in Nico's bag",
+    "File the extra closet screws with the rest of the hardware",
+  ]);
+  const ids = result.items
+    .filter((t: { title: string }) => shortlist.has(t.title))
+    .map((t: { id: string }) => t.id);
+  if (ids.length !== shortlist.size)
+    throw new Error(
+      "The low-energy recommendations no longer match the search.",
+    );
   return {
     response:
       "**I’d refill Nico’s folder.** It’s a small, useful thing you can finish without much thought.\n\n- **Refill Nico’s spare folder — 10 minutes.** Add a blank permission slip and the contact card.\n- **Put away the extra closet screws — 8 minutes.** The labeled bag just needs to go in the repair box.\n\nBoth are ready to do at home, with nothing blocking them. You could fit both into twenty minutes, but one is plenty if you’re wiped.",

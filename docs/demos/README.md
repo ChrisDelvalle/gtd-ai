@@ -9,7 +9,7 @@ The website and scripted-chat demos run entirely in the visitor's browser. They 
 - Support everyday task and project edits with version checks, atomic batches, history, and undo. Recurrence definitions are read-only. No sign-in or external integrations.
 - Each chat has its own sandbox. Sending its prepared prompt runs once; switching conversations preserves edits and scroll. Reload resets every conversation.
 - Match the inspected ChatGPT reference: a 768px conversation column, 16px system text with 26px message line height, purple user bubbles, dark card surfaces, responsive chat sidebar, and fixed composer. Keep GTD AI branding and omit unrelated account/model controls.
-- Expanded widgets occupy a right-side viewer on desktop and the content area on phones, with a 52px host toolbar. Closing restores the inline widget and its state.
+- Expanded widgets occupy a resizable right-side viewer on desktop and the content area on phones, with a 53px host toolbar. The inline card leaves the conversation flow while expanded. Closing restores its position, state, and keyboard focus.
 - Website and chat cards remain usable on phone and wide desktop, with sidebars open/closed, both themes, keyboard focus, touch, and reduced motion. Modal gestures must not scroll the background.
 
 ## Data provenance
@@ -71,4 +71,6 @@ Published demos: [website](https://chrisdelvalle.github.io/gtd-ai/website/) · [
 
 ### Chat presentation follow-up
 
-The follow-up adds a fourth conversation for email action items, streamed Markdown replies, measured composer/sidebar typography, and two linked cards in the priorities conversation. The viewer slides in and out from the right without remounting its card. Local verification covers 18 data/packaging checks and 50 Chromium/WebKit cases, including cross-card completion/undo, email source inspection, reduced motion, and both sides of the 800px and 1000px layout breakpoints. Representative phone and desktop screenshots are inspected before publication.
+The follow-up adds a fourth conversation for email action items, streamed Markdown replies, measured composer/sidebar typography, and two linked cards in the priorities conversation. A short working/opening sequence precedes the cards, followed by the reply. The viewer slides in and out from the right without remounting its card; desktop visitors can resize the split or enter full view. The low-energy card shows both recommendations from the reply on its first page.
+
+The expanded verification matrix contains 18 data/packaging checks and 74 Chromium/WebKit cases. It covers cross-card completion/undo, email sources, clipboard controls, reduced motion, keyboard and pointer resizing, focus restoration, and both sides of the 800px and 1000px layout breakpoints. Additional sizes reach from 360px phones to 1920px desktops. The visual findings and intentional host differences are recorded in [design verification](../../design-qa.md).

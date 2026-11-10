@@ -1,5 +1,22 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 const base = "/gtd-ai";
+// Child-frame click stability does not include an animated parent iframe in
+// WebKit. Verify the pane has reached its intended edge before interacting.
+async function expandedAtRest(page: Page) {
+  await expect(page.locator(".expanded-frame")).toBeVisible();
+  await expect
+    .poll(() =>
+      page
+        .locator(".expanded-frame")
+        .evaluate((el) =>
+          Math.abs(
+            el.getBoundingClientRect().left -
+              parseFloat(getComputedStyle(el).left),
+          ),
+        ),
+    )
+    .toBeLessThan(0.1);
+}
 test.beforeEach(async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -161,6 +178,7 @@ for (const width of [390, 1440]) {
         exact: true,
       }),
     ).toBeVisible();
+    await expandedAtRest(page);
     await page.screenshot({ path: info.outputPath("chat-expanded.png") });
     await frame
       .getByRole("button", { name: "Critical, Overdue: 1 task", exact: true })
@@ -574,6 +592,7 @@ for (const width of [390, 1440]) {
     expect(slide.start).toBeGreaterThanOrEqual(width - 1);
     expect(slide.middle).toBeGreaterThan(slide.end);
     expect(slide.middle).toBeLessThan(slide.start);
+    await expandedAtRest(page);
     await task
       .getByRole("button", { name: `Details: ${title}`, exact: true })
       .click();
@@ -593,6 +612,7 @@ for (const width of [390, 1440]) {
     await chart
       .getByRole("button", { name: "Expand view", exact: true })
       .click();
+    await expandedAtRest(page);
     await chart
       .getByRole("button", { name: "Critical, Overdue: 1 task", exact: true })
       .click();
@@ -615,6 +635,7 @@ for (const width of [390, 1440]) {
     await chart
       .getByRole("button", { name: "Expand view", exact: true })
       .click();
+    await expandedAtRest(page);
     await chart
       .getByRole("button", { name: "Critical, Overdue: 1 task", exact: true })
       .click();
@@ -766,3 +787,134 @@ for (const width of [390, 880, 1440]) {
     await page.screenshot({ path: info.outputPath("restored-inline.png") });
   });
 }
+
+for (const width of [360, 768, 1280, 1920])
+  for (const theme of ["light", "dark"]) {
+    test(`chat fidelity matrix ${width} ${theme}`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: width < 801 ? 844 : 1000 });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(`${base}/chat/#energy`);
+      if (theme === "light")
+        await page.getByRole("button", { name: "Use light theme" }).click();
+      if (width >= 1000)
+        await page
+          .getByRole("button", { name: "Close sidebar", exact: true })
+          .click();
+      await page.getByRole("button", { name: "Send prepared example" }).click();
+      const frame = page.frameLocator(
+        'iframe[title="GTD widget — Twenty minutes, low energy"]',
+      );
+      await expect(
+        frame.getByRole("button", { name: /^Details:/ }),
+      ).toHaveCount(2);
+      await expect(
+        frame.getByRole("button", {
+          name: "Details: File the extra closet screws with the rest of the hardware",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Copy response", exact: true }),
+      ).toBeVisible();
+      const bubble = await page.locator(".user-message").evaluate((el) => {
+        const s = getComputedStyle(el);
+        return {
+          size: s.fontSize,
+          line: s.lineHeight,
+          radius: s.borderRadius,
+          padding: s.padding,
+        };
+      });
+      expect(bubble).toEqual({
+        size: "16px",
+        line: "26px",
+        radius: "22px",
+        padding: "10px 16px",
+      });
+      if (width > 800)
+        await expect(page.locator(".chat-composer")).toHaveCSS(
+          "height",
+          "52px",
+        );
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({ path: info.outputPath("chat-inline.png") });
+      await page
+        .getByRole("button", { name: "Expand GTD card", exact: true })
+        .click();
+      await expect(page.locator(".expanded-frame")).toBeVisible();
+      await page.screenshot({ path: info.outputPath("chat-split.png") });
+      if (width > 800) {
+        const divider = page.getByRole("separator", {
+          name: "Resize chat and widget",
+        });
+        const start = Number(await divider.getAttribute("aria-valuenow"));
+        await divider.press("ArrowRight");
+        expect(Number(await divider.getAttribute("aria-valuenow"))).toBe(
+          start + 32,
+        );
+        const handle = (await divider.boundingBox())!;
+        await page.mouse.move(handle.x + 4, 200);
+        await page.mouse.down();
+        await page.mouse.move(handle.x + 100, 200);
+        await page.mouse.up();
+        expect(await page.evaluate(() => getSelection()?.toString())).toBe("");
+        expect(
+          Number(await divider.getAttribute("aria-valuenow")),
+        ).toBeGreaterThan(start + 100);
+        await page
+          .getByRole("button", { name: "Enter full view", exact: true })
+          .click();
+        await expect(page.locator(".expanded-frame")).toHaveCSS("left", "52px");
+        await expect(
+          page.getByRole("button", { name: "Exit full view" }),
+        ).toHaveAttribute("aria-pressed", "true");
+        await page.screenshot({ path: info.outputPath("chat-full.png") });
+        await page.getByRole("button", { name: "Exit full view" }).click();
+      }
+      await page.getByRole("button", { name: "Close expanded view" }).click();
+      await expect(
+        frame.getByRole("button", { name: "Expand view", exact: true }),
+      ).toBeFocused();
+      await page
+        .getByRole("button", { name: "Open sidebar", exact: true })
+        .click();
+      await expect(
+        page.getByRole("link", { name: "Explore the website" }),
+      ).toBeVisible();
+      await page.screenshot({ path: info.outputPath("chat-sidebar.png") });
+    });
+  }
+
+test("local working sequence and copy actions", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          document.documentElement.dataset.copied = text;
+        },
+      },
+    });
+  });
+  await page.goto(`${base}/chat/#energy`);
+  await page.getByRole("button", { name: "Send prepared example" }).click();
+  await expect(page.locator(".work-status")).toHaveText("Working…");
+  await expect(page.locator(".work-status")).toHaveText("Opening GTD…");
+  await expect(page.locator(".work-status")).toHaveText(
+    "Worked for a few seconds",
+  );
+  await page.getByRole("button", { name: "Copy message", exact: true }).click();
+  expect(await page.locator("html").getAttribute("data-copied")).toContain(
+    "I'm home, pretty wiped",
+  );
+  await page
+    .getByRole("button", { name: "Copy response", exact: true })
+    .click();
+  expect(await page.locator("html").getAttribute("data-copied")).toContain(
+    "**I’d refill Nico’s folder.**",
+  );
+});

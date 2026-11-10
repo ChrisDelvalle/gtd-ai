@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowUp,
@@ -9,14 +15,18 @@ import {
   RotateCcw,
   X,
   ExternalLink,
+  Maximize2,
 } from "lucide-react";
 import { cardCount, scenarios, type ScenarioId } from "./scenarios";
 import { StreamedReply } from "./streamed-reply";
 import { InboxPreview } from "./inbox";
 import { DemoConversations } from "./conversations";
 import { loadDemo } from "./bootstrap";
+import { useViewerPane } from "./viewer-pane";
+import { CopyMessage } from "./copy-message";
 type Progress = {
   sent: boolean;
+  stage: number;
   response: string;
   cards: Record<number, { height: number; ready: boolean }>;
   error?: string;
@@ -27,6 +37,7 @@ const initial = () =>
       s.id,
       {
         sent: false,
+        stage: 0,
         response: "",
         cards: Object.fromEntries(
           Array.from({ length: cardCount(s.id) }, (_, i) => [
@@ -47,6 +58,8 @@ function Chat() {
     [expanded, setExpanded] = useState<string | null>(null);
   const [sessions] = useState(() => new DemoConversations(loadDemo));
   const [closing, setClosing] = useState(false);
+  const viewer = useViewerPane();
+  const stages = useRef(new Set<ReturnType<typeof setTimeout>>());
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const frames = useRef(new Map<string, HTMLIFrameElement>()),
     closeButton = useRef<HTMLButtonElement>(null),
@@ -84,6 +97,7 @@ function Chat() {
       preserveCaption(key);
       setExpanded(null);
       setClosing(false);
+      viewer.reset();
       post(key, "restore-focus");
     };
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) finish();
@@ -113,6 +127,7 @@ function Chat() {
   useEffect(() => {
     const hash = () => {
       cancelClose();
+      viewer.reset();
       setCurrent(selected());
       setExpanded(null);
     };
@@ -219,12 +234,14 @@ function Chat() {
     addEventListener("message", message);
     return () => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
+      for (const timer of stages.current) clearTimeout(timer);
       removeEventListener("hashchange", hash);
       removeEventListener("message", message);
     };
   }, []);
   function choose(id: ScenarioId) {
     cancelClose();
+    viewer.reset();
     location.hash = id;
     setCurrent(id);
     setExpanded(null);
@@ -245,12 +262,29 @@ function Chat() {
   }, [expanded, current]);
   function send() {
     if (progress[current].sent) return;
-    setProgress((p) => ({ ...p, [current]: { ...p[current], sent: true } }));
+    const id = current;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setProgress((p) => ({
+      ...p,
+      [id]: { ...p[id], sent: true, stage: reduce ? 3 : 1 },
+    }));
+    if (!reduce)
+      for (const [delay, stage] of [
+        [400, 2],
+        [850, 3],
+      ]) {
+        const timer = setTimeout(() => {
+          stages.current.delete(timer);
+          setProgress((p) => ({ ...p, [id]: { ...p[id], stage } }));
+        }, delay);
+        stages.current.add(timer);
+      }
   }
   const script = scenarios.find((s) => s.id === current)!;
   return (
     <div
-      className={`chat-demo${sidebar ? " sidebar-open" : ""}${expanded ? " has-viewer" : ""}${closing ? " viewer-closing" : ""}`}
+      className={`chat-demo${sidebar ? " sidebar-open" : ""}${expanded ? " has-viewer" : ""}${closing ? " viewer-closing" : ""}${viewer.full ? " viewer-full" : ""}${viewer.dragging ? " viewer-resizing" : ""}`}
+      style={{ "--viewer-left": `${viewer.left}px` } as CSSProperties}
     >
       <nav className="chat-rail" aria-label="Demo navigation">
         <button
@@ -307,7 +341,7 @@ function Chat() {
           </button>
         </div>
       </aside>
-      <div className="conversation-area">
+      <div className="conversation-area" inert={sidebar && viewer.width < 1000}>
         <header className="chat-topbar">
           <span>
             GTD AI <small>demo</small>
@@ -337,11 +371,25 @@ function Chat() {
                 {!p.sent && <h1>{s.title}</h1>}
                 {p.sent && (
                   <>
-                    <div className="user-message">{s.prompt}</div>
+                    <div className="user-turn">
+                      <div className="user-message">{s.prompt}</div>
+                      <CopyMessage text={s.prompt} label="Copy message" />
+                    </div>
                     <div className="assistant-message">
+                      {!p.error && (
+                        <div
+                          className="work-status"
+                          role="status"
+                          aria-live="polite"
+                        >
+                          {p.stage === 1
+                            ? "Working…"
+                            : p.stage < 3 || !p.response
+                              ? "Opening GTD…"
+                              : "Worked for a few seconds"}
+                        </div>
+                      )}
                       {s.id === "inbox" && p.response && <InboxPreview />}
-                      {!Object.values(p.cards).some((c) => c.ready) &&
-                        !p.error && <p role="status">Opening GTD…</p>}
                       {p.error && (
                         <p role="alert">
                           {p.error}{" "}
@@ -350,52 +398,71 @@ function Chat() {
                           </button>
                         </p>
                       )}
-                      {Object.entries(p.cards).map(([index, card]) => {
-                        const key = `${s.id}:${index}`;
-                        return (
-                          <div
-                            key={key}
-                            className="chat-result"
-                            data-ready={card.ready || undefined}
-                            inert={!card.ready}
-                          >
-                            <div className="chat-result-body">
-                              <div className="tool-caption">
-                                <PanelTop size={17} />
-                                <span>Opened GTD</span>
-                              </div>
-                              <div
-                                className="inline-card-slot"
-                                style={{
-                                  height: expanded === key ? 0 : card.height,
-                                }}
-                              >
-                                <iframe
-                                  className={
-                                    expanded === key
-                                      ? "demo-frame expanded-frame"
-                                      : "demo-frame"
-                                  }
-                                  title={`GTD widget — ${s.title}${index === "0" ? "" : " — Recommended task"}`}
-                                  src={`../widget/#${s.id}:${index}`}
-                                  ref={(node) => {
-                                    if (node) frames.current.set(key, node);
-                                    else frames.current.delete(key);
-                                  }}
+                      {p.stage >= 2 &&
+                        Object.entries(p.cards).map(([index, card]) => {
+                          const key = `${s.id}:${index}`;
+                          return (
+                            <div
+                              key={key}
+                              className="chat-result"
+                              data-ready={
+                                (card.ready && p.stage >= 3) || undefined
+                              }
+                              inert={!card.ready}
+                            >
+                              <div className="chat-result-body">
+                                <div className="tool-caption">
+                                  <PanelTop size={17} />
+                                  <span>Opened GTD</span>
+                                  {expanded !== key && (
+                                    <button
+                                      className="caption-expand"
+                                      aria-label={`Expand ${index === "0" ? "GTD" : "recommended task"} card`}
+                                      onClick={() => {
+                                        preserveCaption(key);
+                                        cancelClose();
+                                        setExpanded(key);
+                                        setSidebar(false);
+                                      }}
+                                    >
+                                      <Maximize2 size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                                <div
+                                  className="inline-card-slot"
                                   style={{
-                                    height:
-                                      expanded === key
-                                        ? undefined
-                                        : card.height,
+                                    height: expanded === key ? 0 : card.height,
                                   }}
-                                  allow="clipboard-write"
-                                />
+                                >
+                                  <iframe
+                                    className={
+                                      expanded === key
+                                        ? "demo-frame expanded-frame"
+                                        : "demo-frame"
+                                    }
+                                    title={`GTD widget — ${s.title}${index === "0" ? "" : " — Recommended task"}`}
+                                    src={`../widget/#${s.id}:${index}`}
+                                    ref={(node) => {
+                                      if (node) frames.current.set(key, node);
+                                      else frames.current.delete(key);
+                                    }}
+                                    style={{
+                                      height:
+                                        expanded === key
+                                          ? undefined
+                                          : card.height,
+                                    }}
+                                    allow="clipboard-write"
+                                  />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                      {p.response && <StreamedReply text={p.response} />}
+                          );
+                        })}
+                      {p.response && p.stage >= 3 && (
+                        <StreamedReply text={p.response} />
+                      )}
                     </div>
                   </>
                 )}
@@ -405,7 +472,7 @@ function Chat() {
         })}
         <div className="composer-dock" inert={!!expanded}>
           <form
-            className="chat-composer"
+            className={`chat-composer${progress[current].sent ? " is-empty" : ""}`}
             onSubmit={(e) => {
               e.preventDefault();
               send();
@@ -431,21 +498,25 @@ function Chat() {
         </div>
       </div>
       {expanded && (
-        <header className="viewer-toolbar">
-          <span>
-            <PanelTop size={16} />
-            GTD
-          </span>
-          <div>
-            <button
-              aria-label="Close expanded view"
-              ref={closeButton}
-              onClick={dismiss}
-            >
-              <X size={21} />
-            </button>
-          </div>
-        </header>
+        <>
+          {viewer.divider}
+          <header className="viewer-toolbar">
+            <span>
+              <PanelTop size={16} />
+              GTD
+            </span>
+            <div>
+              {viewer.toggle}
+              <button
+                aria-label="Close expanded view"
+                ref={closeButton}
+                onClick={dismiss}
+              >
+                <X size={21} />
+              </button>
+            </div>
+          </header>
+        </>
       )}
     </div>
   );

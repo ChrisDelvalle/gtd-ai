@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Markdown from "react-markdown";
+import { CopyMessage } from "./copy-message";
 
 type TextTree = { type: string; value?: string; children?: TextTree[] };
 
@@ -71,21 +72,24 @@ export function StreamedReply({ text }: { text: string }) {
     };
   }, [text]);
   return (
-    <div
-      className="streamed-reply"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      aria-busy={!finished}
-    >
-      <Markdown
-        allowedElements={["p", "strong", "em", "ul", "ol", "li"]}
-        unwrapDisallowed
-        skipHtml
-        rehypePlugins={plugins}
+    <>
+      <div
+        className="streamed-reply"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-busy={!finished}
       >
-        {text}
-      </Markdown>
-    </div>
+        <Markdown
+          allowedElements={["p", "strong", "em", "ul", "ol", "li"]}
+          unwrapDisallowed
+          skipHtml
+          rehypePlugins={plugins}
+        >
+          {text}
+        </Markdown>
+      </div>
+      {finished && <CopyMessage text={text} label="Copy response" />}
+    </>
   );
 }

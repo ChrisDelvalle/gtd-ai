@@ -22,7 +22,7 @@ Reference: the user-selected GTD Demo Reference conversation, inspected read-onl
 
 - Website: the shared application, light by default, with a small Demo/reset/theme control. Priority squares center on the available content pane, not the viewport or sidebar.
 - Chat: measured 52px navigation rail, 284px desktop sidebar, 768px conversation column, 16px system text at 26px line height, purple user messages, dark surfaces, and a bottom composer. Only the four prepared conversations and relevant demo controls are present.
-- Expanded card: the existing live iframe remains mounted. Desktop uses a viewer beginning 405px from the left, a 53px host toolbar, and a centered 780px application area. Phone uses the full content width. Closing returns to the inline card and restores keyboard focus.
+- Expanded card: the existing live iframe remains mounted. Desktop uses a resizable split, with a minimum 353px conversation area beside the 52px rail, a 53px host toolbar, and a centered application area. Phone uses the full content width. Closing returns to the inline card and restores keyboard focus.
 
 ## Checks
 
@@ -40,6 +40,20 @@ Screenshot review also caught Results task titles falling back to default border
 
 Intended behavior: the expanded iframe leaves no empty card slot in the conversation; its caption remains, and later content moves up. Preserve the same iframe and its edits, restore the inline position and keyboard focus on close, and slide the viewer in/out from the right. The desktop split is resizable with keyboard and pointer controls; a full-width viewer is available. Phone uses a full-width viewer. The website link appears only as text at the bottom of the sidebar.
 
-Compare measured native message bubbles (70% desktop maximum width, 10px/16px padding, 22px radius, purple #4e2f88), 16px/26px body text, 14px/20px sidebar text, compact empty desktop composer, and 52px host toolbar. Keep the demo identity and omit account, model, voice, upload, and unrelated navigation controls. A brief local working/opening sequence precedes cards, then the readable reply streams beneath them. Copy controls act on the fictional text only.
+Compare measured native message bubbles (70% desktop maximum width, 10px/16px padding, 22px radius, purple #4e2f88), 16px/26px body text, 14px/20px sidebar text, compact empty desktop composer, and 53px viewer toolbar. Keep the demo identity and omit account, model, voice, upload, and unrelated navigation controls. A brief local working/opening sequence precedes cards, then the readable reply streams beneath them. Copy controls act on the fictional text only.
 
 Verification matrix: 360/390/768px phone/tablet, both sides of 800px and 1000px layout breakpoints, 1280/1440/1920px desktops, sidebar open/closed, light/dark, inline/split/full viewers, keyboard and reduced motion. Check geometry against the pane, not the viewport; no blank slot, iframe reload, horizontal overflow, focus loss, or duplicated scripted writes. Screenshots must be compared with the source at matching viewports. The source is the user-authorized reference conversation; its private content must stay out of the repository and published artifacts.
+
+### Findings and corrections
+
+- The reference removes the expanded card's inline height, leaving its caption in the conversation. The previous demo retained a blank slot. Expansion and return now preserve the caption's viewport position and retain the iframe; fullscreen height reports cannot overwrite its inline height.
+- The source's desktop split varies with the viewport and can be resized. The demo now provides pointer and keyboard resizing plus a full-view toggle. Screenshot review caught text selection beginning during a divider drag; pointer-down now prevents native selection before the drag starts.
+- The empty desktop composer measured 52px high; the previous demo remained nearly twice that height. The composer, bubble dimensions, sidebar foreground opacity, selected rows, and card-to-reply spacing now use the measured reference values.
+- The low-energy reply recommended a task that appeared on a later page. The scripted search now selects its two stated recommendations from the actual eligible results, and verifies that both still qualify.
+- WebKit's child-frame click stability did not account for the moving parent iframe. The tests now assert that the expanded pane has reached its intended edge before clicking inside it. Animation tests still measure the start, midpoint, and end independently.
+
+Screenshots are captured at 1× browser scale. Representative evidence includes `web/demo-results/browser-chat-fidelity-matrix-360-dark-webkit/chat-inline.png`, the corresponding 1280px split view, 1920px full view, and website priority overlays in both themes. Native phone and desktop references were inspected alongside the candidate at matching sizes. Reference images remain outside public assets.
+
+Intentional differences: GTD AI branding, four authored conversations, a prepared read-only composer, and no model/account/voice/upload controls. The full-view host does not add a second chat composer because arbitrary conversation is outside the demo. Widgets use the maintained application components rather than copying an older production build's internal styling. These are scope choices, not unverified claims of pixel-identical host behavior.
+
+Final local result: **passed**. All 74 Chromium/WebKit demo checks and 18 data/packaging checks pass. The two mobile animation interactions also pass five repetitions each. The unrelated refresh test passes ten WebKit repetitions after its setup race was corrected. No unresolved high- or medium-severity visual findings remain in the inspected scope. GitHub publication is checked separately after CI; phone checks are browser emulation, not physical devices.
