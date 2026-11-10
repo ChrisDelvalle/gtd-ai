@@ -889,8 +889,17 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
       return element.scrollHeight > element.clientHeight && element.getBoundingClientRect().bottom <= card.bottom;
     })).toBe(true);
     const heading = (await list.getByRole("heading").boundingBox())!;
+    if (browserName === "chromium") await panel.evaluate(element => {
+      element.dataset.gestureEnded = "false";
+      element.addEventListener("scrollend", () => {
+        element.dataset.gestureEnded = "true";
+      }, {once: true});
+    });
     await verticalGesture(page, browserName, heading.x + 20, heading.y + 8, -55);
     await expect.poll(() => panel.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
+    // A tap during a native fling stops momentum rather than activating the
+    // button. Finish this gesture before testing subsequent taps and paging.
+    if (browserName === "chromium") await expect(panel).toHaveAttribute("data-gesture-ended", "true");
     const widgetScroll = frame.locator(".widget-scroll");
     await expect(widgetScroll).toHaveCSS("overflow-y", "hidden");
     const startScroll = await widgetScroll.evaluate(element => element.scrollTop);

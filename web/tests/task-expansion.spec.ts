@@ -126,6 +126,14 @@ for (const reduced of [false, true]) {
       exact: true,
     });
     await expect(title).toBeVisible();
+    // The legacy launch receives input and result notifications separately.
+    // Wait for the selected-task toolbar before recording the collapsed size.
+    await expect(frame.getByRole("button", { name: "GTD navigation" }))
+      .toHaveText("Selected tasks");
+    await expect.poll(() => frame.locator(".widget-surface").evaluate(surface => {
+      const content = surface.querySelector(".widget-content")!;
+      return Math.abs(surface.clientHeight - content.getBoundingClientRect().height);
+    })).toBeLessThanOrEqual(1);
     const initial = Math.ceil(
       await frame
         .locator("#root")
