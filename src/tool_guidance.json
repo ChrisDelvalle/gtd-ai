@@ -1,0 +1,247 @@
+{
+  "tools": [
+    {
+      "name": "show_gtd",
+      "description_variants": {
+        "ui_enabled": "Display GTD Home by default, or Repeating, Review, Activity, Charts, Help or Results. Use view=charts when the user asks to see their activity or completion charts. For Results supply 1–50 distinct from_request_ids copied from committed write receipts; returns current records from those requests with stable pagination. Does not include secondary automatic effects; inspect those with request-filtered list_changes. Unavailable references fail without substituting unrelated tasks. series_id applies only to Repeating. Use show_tasks/show_projects for specific records.",
+        "ui_disabled": "Return a GTD launch receipt, or committed request records with view=results and from_request_ids. Interactive cards are disabled. Results reflect current records at a frozen snapshot; next_cursor continues via show_gtd with the same selectors."
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Ordinary launches validate arguments. Results reads committed receipts and frozen records without settling availability; UI interactions make separate calls."
+    },
+    {
+      "name": "create_recurrence",
+      "description": "Create a calendar-date repeating series from a rule and task defaults. Preview with list_occurrences first. Defaults require importance and agent_notes, plus brief outside Inbox and estimates for committed unfinished work. task_id with expected_task_version adopts an existing unfinished task without duplicating it. Supply request_id and reason. Returns a compact receipt; adoption can replace occurrence fields, and creation may save automatic readiness changes.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Ordinary creation adds a series and may materialize dated occurrences; adoption applies defaults to an existing task and records a new version. Shared transaction finalization can update other tasks' readiness. Same-key exact retry returns the stored receipt."
+    },
+    {
+      "name": "update_recurrence",
+      "description": "Edit a stored occurrence or this-and-following/all defaults; skip/unskip one occurrence; or pause/resume/end repetition. Supply scope, expected_version, request_id and reason; stored occurrence edits also need expected_occurrence_version. Read defaults before replacing template or rule. Top-level brief or agent_notes supports scoped content-only edits. For retained segment backfill, scope=segment with segment_from allows brief-only edits. Completed history and occurrence overrides survive scoped changes. Returns a compact receipt; coupled changes undo atomically.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Modes overwrite defaults/occurrences, mark skips, cancel future repetition or change pauses, with coupled audit changes. Undo support does not negate these effects.",
+      "implementation_gate": "Implement top-level scoped brief edits and the restricted segment scope before publishing this description. scope=segment requires action=edit and an exact segment_from returned at the expected series version; forbid rule/template/agent_notes/original_date/scheduled_date in that scope. It updates the retained segment brief and unfinished governed occurrences without a brief override; completed records require separate edits."
+    },
+    {
+      "name": "list_occurrences",
+      "description": "List series when neither series_id nor rule is supplied. Use series_id for stored occurrences and effective defaults; add segments_only=true for complete retained default segments. Use rule with optional template for dates and clock-change previews without creating tasks. Stored records include brief, notes and agent_notes; previews are hypothetical. Occurrence dates default from today in America/New_York; use an earlier from for missed/past work. Continue with the returned cursor and unchanged selectors. Pages may be shorter to retain complete context.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Current series listing, stored-occurrence lookup and rule preview use read transactions. Materialization is in create/worker paths, not this operation.",
+      "implementation_gate": "Complete current/effective series defaults and stored occurrence context replace current compact projections. Implement segments_only=true with series_id and existing cursor/limit; segment results include the version-scoped segment_from boundary for brief-only backfill."
+    },
+    {
+      "name": "capture_item",
+      "description": "Create a task or capture an unclarified thought in Inbox. Agent-created tasks require importance and agent_notes; brief is required outside Inbox, and unfinished committed work requires estimates. Use update_item for a matching existing task. Supply a unique request_id and reason. Returns a compact receipt; automatic readiness changes may also be saved. After uncertain delivery, retry the identical arguments and request_id.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Explicit capture is additive, but shared transaction finalization can overwrite existing tasks' status when not_before expires. Marking the whole tool non-destructive would omit this current side effect."
+    },
+    {
+      "name": "list_items",
+      "description": "Read tasks without requesting a card. Defaults to 20 active tasks: Next, Inbox, Waiting and Blocked, in Recommended order. Returned records include brief, notes and agent_notes. Use status for one state, archived=true for the archive, view=all for every retained state including archive, or explicit IDs for focused reads. Filters compose; pages may be shorter to retain complete context. Continue with next_cursor and unchanged filters. Fresh reads may save readiness transitions when not_before has elapsed.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": false
+      },
+      "rationale": "Store::list invokes settle_availability for a fresh read. That transaction can update existing statuses, versions and audit history. Repeating identical arguments at another clock boundary can cause additional changes. Frozen cursor continuation itself does not settle availability."
+    },
+    {
+      "name": "update_item",
+      "description": "Patch a task or its specific stored recurring occurrence using expected_version, request_id and reason. Read the current record first. Omitted/null fields preserve values; use the documented explicit clear controls. A brief is required when leaving Inbox; model clarification also requires agent_notes if absent. Supplied agent_notes must be nonblank. Returns a compact receipt and may change dependents' readiness. A conflict requires a fresh read and decision, not a blind retry.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Can replace long fields, dates, links, state or membership and cause automatic dependent transitions. Same-key exact retry replays the committed receipt."
+    },
+    {
+      "name": "undo_change",
+      "description": "Reverse a record's latest change using change_id, current expected_version, request_id and reason. Coupled recurrence and automatic-readiness changes reverse together or fail on conflict. General batches are not one undo group. Undoing creation creates a reversible tombstone; retained references can prevent it. Historical values are restored only when current consistency rules allow them. Undoing an undo redoes it. Returns a compact receipt.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Can replace current records or tombstone creations, including multiple coupled records. A reverse operation is itself a new mutation. Same request ID prevents repeated reversal on retry."
+    },
+    {
+      "name": "apply_changes",
+      "description": "Apply 1–50 task, project or recurrence creation/update/undo operations atomically. Each operation needs a reason; edits/undos need current versions, and agent creates obey the same content requirements as individual tools. No record may change twice, including scoped secondary changes. All succeed or none is saved. Retry an uncertain batch unchanged with the same request_id. Returns compact receipts without a card; use the returned request_id with show_gtd(view=\"results\",from_request_ids=[...]) when a combined card is useful. Read current records for further decisions.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Contains potentially destructive updates, undo and recurrence modes, regardless of whether an individual invocation contains only creates. Atomic retry identity covers the whole batch."
+    },
+    {
+      "name": "list_changes",
+      "description": "Read immutable task, project and series history, newest first, without changing records. from/through are inclusive account-local dates. days=1–366 means previous complete calendar days, excluding today; do not combine with date bounds. Use next_cursor with unchanged filters for a frozen report; legacy before_id remains accepted but cannot accompany cursor. Optional from_request_ids selects committed request effects, including automatic changes. Compact events include category, transitions and undo-aware completion eligibility; change_id with detail=full returns historical bodies. Origin is a service path, not authorship.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Reads immutable history without settling availability. Exact legacy snapshots must not be backfilled or normalized in the result."
+    },
+    {
+      "name": "create_project",
+      "description": "Create a flat GTD project for a desired outcome. Supply title, brief, agent_notes, request_id and reason; supporting notes and dates are optional. Projects have no importance or nested projects. After creation, attach tasks with the returned project_id. Use apply_changes for related updates whose IDs are already known. Returns a compact receipt; automatic task-readiness changes may also be saved.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Project creation is additive in its explicit fields, but shared transaction finalization can overwrite existing task statuses at availability boundaries. Same-key exact retry is idempotent."
+    },
+    {
+      "name": "update_project",
+      "description": "Patch project context or lifecycle with expected_version, request_id and reason. Omitted/null fields preserve values; brief remains required. Completing requires unfinished members done, archived or moved; shelving requires retained unarchived members Someday or Done; archiving requires members archived or moved. Resolve incompatible future/missed recurring commitments too. Use apply_changes for related transitions. Returns a compact receipt.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Can overwrite project context or lifecycle and indirectly change readiness. Current final-transaction relationship validation prevents incompatible membership."
+    },
+    {
+      "name": "list_projects",
+      "description": "Read projects without requesting a card. Defaults to active, unarchived projects with task counts and needs_next_action. Each returned project includes brief, notes and agent_notes. Use project_id for one project; view=all includes all retained lifecycles and archive. Filters and complete-record pagination apply. Read member tasks separately with list_items(project_id=...,view=all,archived=false). Fresh reads may save task-readiness transitions when not_before has elapsed.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": false
+      },
+      "rationale": "Store::projects invokes settle_availability before fresh reads, so project reads can persist task status/version/audit changes. A later identical fresh read can produce more transitions."
+    },
+    {
+      "name": "show_projects",
+      "description_variants": {
+        "ui_enabled": "Read projects and request their interactive view using the same filters and complete context as list_projects. Use project_id to open an outcome and its actions; the interface loads member tasks separately. Defaults to active, unarchived projects. Continue lists with next_cursor. Fresh reads may save task-readiness transitions when not_before has elapsed.",
+        "ui_disabled": "Read projects using the same filters and complete context as list_projects. Interactive cards are disabled; summarize useful results in text. Defaults to active, unarchived projects. Fresh reads may save task-readiness transitions when not_before has elapsed."
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": false
+      },
+      "rationale": "Uses the same store path as list_projects; requesting a card does not remove the automatic status-write behavior."
+    },
+    {
+      "name": "sync_state",
+      "description": "Read a consistent whole-store snapshot, then changes since a checkpoint, including inactive records and complete agent context. No cursor starts a snapshot; next_cursor continues its fixed traversal; a completed checkpoint starts subsequent changes. Record-bearing deltas include the record at that revision or a tombstone. Buffer split transactions until transaction_end. reset_required means rebuild from a fresh snapshot. Initial snapshot reads may save elapsed availability transitions. Persist local records and checkpoint together. A checkpoint alone is not retained task knowledge.",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": false
+      },
+      "rationale": "Initial sync (without cursor) calls settle_availability. Continuations/checkpoint reads do not, but the tool-level annotation must cover its initial mode as well."
+    },
+    {
+      "name": "show_tasks",
+      "description_variants": {
+        "ui_enabled": "Read tasks and request their interactive view using the same filters and complete context as list_items. Without selectors or filters, defaults to five recently changed nondeleted tasks, including completed and archived tasks. Filtered Recommended views group unfinished recurring occurrences unless explicit task IDs are supplied. Use task_ids for a focused confirmation and next_cursor for further pages. A card request does not prove the host rendered it. Fresh reads may save readiness transitions when not_before has elapsed.",
+        "ui_disabled": "Read tasks using the same filters and complete context as list_items. Interactive cards are disabled; summarize useful results in text. Without selectors or filters, defaults to five recently changed nondeleted tasks, including completed and archived tasks. Fresh reads may save readiness transitions when not_before has elapsed."
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": false
+      },
+      "rationale": "Uses Store::list and its fresh-read availability settlement. Existing recurrence grouping is presentation behavior and does not remove complete context from the selected stored record."
+    }
+  ],
+  "app_only_facades": [
+    {
+      "name": "gtd_ui_read",
+      "description": "Load GTD interface data through an allowlisted read operation. Uses compact human-interface projections, with full fields or agent notes only when the interface requests them. Preserve the underlying operation's filters, frozen cursors, environment checks and errors. Fresh task/project/snapshot reads may save elapsed availability transitions. This tool is for the GTD interface, not model-authored record reads.",
+      "allowed_operations": [
+        "view_snapshot",
+        "list_items",
+        "list_projects",
+        "list_occurrences",
+        "list_changes",
+        "sync_state",
+        "activity_summary",
+        "activity_day",
+        "request_results"
+      ],
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": false
+      },
+      "rationale": "The facade retains the existing read implementations and can inherit their authoritative status writes. Its name describes requested UI operations, not a claim of side-effect freedom.",
+      "schema_rule": "Use a discriminated operation/arguments union generated from the existing UI input types, not arbitrary tool names or an unrestricted object. The read facade does not accept mutations."
+    },
+    {
+      "name": "gtd_ui_write",
+      "description": "Apply an explicit GTD interface edit through an allowlisted mutation. Human entry follows shared validation, versions, retries, audit and undo; it does not require agent-authored handoff text. Preserve the original business operation, arguments and request_id when retrying after an uncertain result. Return the existing compact receipt or structured error. This tool is for interface actions, not model-authored writes.",
+      "allowed_operations": [
+        "capture_item",
+        "update_item",
+        "undo_change",
+        "apply_changes",
+        "create_project",
+        "update_project",
+        "create_recurrence",
+        "update_recurrence"
+      ],
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": false,
+        "idempotentHint": true
+      },
+      "rationale": "Includes overwrites, tombstones, recurrence cancellation/adoption and automatic readiness changes. The facade must preserve request identity across transport migration rather than replaying the same intent as a new write.",
+      "schema_rule": "Use a discriminated operation/arguments union generated from human-entry contracts. Nested batches use the same execution policy and shared transaction code. Do not offer a model-callable flag to weaken agent-create requirements."
+    }
+  ],
+  "adapter_instruction_suffix": {
+    "ui_enabled": "Read and write tools return data without displaying cards. Display a card when it helps the user inspect or act on the result, normally once after a logical set of operations. Use task or project IDs for a specific selection. After a batch, use its returned request_id with show_gtd(view=\"results\",from_request_ids=[...]). A text summary may be sufficient; a successful tool call does not guarantee that the host rendered a card.",
+    "ui_disabled": "Interactive cards are disabled. Use read tools and summarize useful results in text. Display tools still return data, but do not open an interface."
+  },
+  "environment_instruction_prefix": {
+    "production": "",
+    "test": "TEST MODE: disposable synthetic data. Do not treat these records as the user’s real commitments.\n",
+    "demo": "DEMO MODE: fictional demonstration data. Do not treat these records as the user’s real commitments.\n"
+  }
+}

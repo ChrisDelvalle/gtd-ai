@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+# Supply the locally verified tag of the approved renewal backport. BuildKit
+# resolves it to the recorded digest; bare local sha256 IDs are not FROM names.
+# Verify that resolved digest against the approved build provenance.
+# No default: a stock Keycloak image has not passed the renewal checkpoint.
+ARG PATCHED_KEYCLOAK
+FROM ${PATCHED_KEYCLOAK}
+COPY --chown=1000:0 deploy/multi-user/themes/gtd /opt/keycloak/themes/gtd
+RUN /opt/keycloak/bin/kc.sh build --db=postgres --features=resource-indicators --health-enabled=true
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
+CMD ["start", "--optimized"]

@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+# These two never-deployed keys are intentionally public signing fixtures.
+[[allowlists]]
+description = "Documented synthetic RSA fixtures; never accepted by installations"
+paths = ['''^tests/fixtures/identity/a\.pem$''', '''^tests/fixtures/identity/b\.pem$''']

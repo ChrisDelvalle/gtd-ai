@@ -1,0 +1,34 @@
+.dependency-fields-inner { display: grid; gap: 8px; padding-top: 8px; min-width: 0; }
+.dependency-selection, .dependency-options button { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dependency-selection > span, .dependency-options button > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dependency-options { display: grid; max-height: 220px; overflow: auto; }
+.dependency-options button { text-align: left; min-height: 44px; background: transparent; border: 0; padding: 6px 8px; font-size: 13px; }
+.dependency-options svg { width: 16px; height: 16px; flex-shrink: 0; }
+.dependency-manual { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.dependency-manual input { width: 18px; height: 18px; margin: 0; }
+.dependency-context { display: grid; gap: 4px; font-size: 12px; min-width: 0; }
+.dependency-context:empty { display: none; }
+.dependency-context .metadata-row { align-items: start; }
+.dependency-context .metadata-key { padding-top: 4px; }
+.dependency-values { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-width: 0; }
+.dependency-values .dependency-link,
+.dependency-values .dependency-more {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.dependency-values .dependency-link { max-width: min(100%, 32ch); }
+.dependency-link .metadata-badge { display: inline-flex; align-items: center; gap: 4px; }
+.dependency-link .dependency-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dependency-link svg { width: 12px; height: 12px; flex-shrink: 0; }
+.dependency-values .dependency-more { color: var(--muted); }
+.dependency-error { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.dependency-options[hidden] { display: none; }

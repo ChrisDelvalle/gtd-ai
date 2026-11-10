@@ -1,0 +1,162 @@
+/* Inherit provider forms, validation, accessibility and password controls.
+   Keep this presentation-only override small enough to review on upgrades. */
+:root {
+  --gtd-canvas: #fff;
+  --gtd-ink: #171717;
+  --gtd-muted: #737373;
+  --gtd-border: #d9d9d9;
+  --gtd-focus: #3267d5;
+  --pf-v5-global--FontFamily--text: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pf-v5-global--FontFamily--heading: var(--pf-v5-global--FontFamily--text);
+}
+.pf-v5-theme-dark {
+  --gtd-canvas: #212121;
+  --gtd-ink: #f3f3f3;
+  --gtd-muted: #aaa;
+  --gtd-border: #505050;
+  --gtd-focus: #86adff;
+}
+html.login-pf, .login-pf body {
+  background: var(--gtd-canvas);
+  color: var(--gtd-ink);
+  height: auto;
+  min-height: 100%;
+}
+body .pf-v5-c-login {
+  min-height: 100svh;
+  padding: max(40px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(40px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: none;
+  place-items: center;
+}
+body .pf-v5-c-login__container {
+  display: block;
+  grid-area: auto;
+  width: min(100%, 360px);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+#kc-header { margin: 0 0 32px; padding: 0; }
+#kc-header-wrapper {
+  color: var(--gtd-ink) !important;
+  font-family: inherit;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  text-transform: none;
+  padding: 0;
+}
+body .pf-v5-c-login__main {
+  background: transparent;
+  box-shadow: none;
+  min-width: 0;
+}
+body .pf-v5-c-login__main-header {
+  padding: 0 0 20px;
+  border: 0;
+}
+#kc-page-title { font-size: 24px; font-weight: 500; line-height: 1.3; }
+/* The ordinary login already has the brand above it. Retain its accessible
+   heading, and leave action/error/password-change headings visible. */
+body:has(#kc-form-login) .pf-v5-c-login__main-header { padding: 0; }
+body:has(#kc-form-login) #kc-page-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+body .pf-v5-c-login__main-body,
+body .pf-v5-c-login__main-footer,
+body .pf-v5-c-login__main-footer-band { padding: 0; background: transparent; }
+body .pf-v5-c-form { gap: 16px; }
+body .pf-v5-c-form__group { min-width: 0; }
+body .pf-v5-c-form__label { color: var(--gtd-muted); font-size: 14px; font-weight: 400; }
+body .pf-v5-c-form__label-text { font-weight: inherit; }
+body .pf-v5-c-form__group-label { padding: 0 18px 6px; }
+body .pf-v5-c-form-control {
+  background: transparent;
+  color: var(--gtd-ink);
+  border: 1px solid var(--gtd-border);
+  border-radius: 999px;
+  min-width: 0;
+  min-height: 52px;
+}
+body .pf-v5-c-form-control::before,
+body .pf-v5-c-form-control::after,
+body .pf-v5-c-button::after { border: 0; }
+body .pf-v5-c-form-control > :is(input, select, textarea) {
+  color: var(--gtd-ink);
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  padding: 13px 19px;
+  min-width: 0;
+}
+body .pf-v5-c-input-group {
+  display: flex;
+  gap: 0;
+  min-width: 0;
+  border: 1px solid var(--gtd-border);
+  border-radius: 999px;
+  background: transparent;
+}
+body .pf-v5-c-input-group .pf-v5-c-form-control { border: 0; min-height: 50px; }
+body .pf-v5-c-input-group__item { min-width: 0; background: transparent; }
+body .pf-v5-c-input-group__item.pf-m-fill { flex: 1; }
+body .pf-v5-c-button {
+  font-family: inherit;
+  font-size: 16px;
+  min-height: 44px;
+  border-radius: 999px;
+}
+body .pf-v5-c-button.pf-m-control {
+  color: var(--gtd-ink);
+  background: transparent;
+  border: 0;
+  min-width: 44px;
+  height: 50px;
+  padding: 12px;
+}
+body .pf-v5-c-button.pf-m-primary {
+  background: var(--gtd-ink);
+  color: var(--gtd-canvas);
+  min-height: 52px;
+  padding: 13px 20px;
+  font-weight: 500;
+}
+body .pf-v5-c-button.pf-m-secondary {
+  background: transparent;
+  color: var(--gtd-ink);
+  border: 1px solid var(--gtd-border);
+}
+body :is(a, .pf-v5-c-button.pf-m-link) { color: var(--gtd-ink); }
+body .pf-v5-c-form-control:focus-within,
+body .pf-v5-c-input-group:focus-within {
+  outline: 2px solid var(--gtd-focus);
+  outline-offset: 2px;
+}
+body .pf-v5-c-input-group .pf-v5-c-form-control:focus-within { outline: 0; }
+/* The surrounding control supplies the keyboard focus ring. */
+body .pf-v5-c-form-control > :is(input, select, textarea):focus { outline: 0; box-shadow: none; }
+body :is(button, a, input[type="submit"], input[type="checkbox"]):focus-visible {
+  outline: 2px solid var(--gtd-focus);
+  outline-offset: 2px;
+}
+body .pf-v5-c-form-control.pf-m-error,
+body .pf-v5-c-input-group:has([aria-invalid="true"]) { border-color: #c54848; }
+body .pf-v5-c-alert { font-size: 14px; border-radius: 12px; }
+body .pf-v5-c-check { font-size: 14px; min-height: 44px; align-items: center; }
+body .pf-v5-c-check__input { width: 16px; height: 16px; margin: 0; align-self: center; accent-color: var(--gtd-ink); }
+@media (prefers-reduced-motion: reduce) {
+  body *, body *::before, body *::after { transition: none !important; }
+}

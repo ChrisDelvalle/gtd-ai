@@ -1,0 +1,109 @@
+/* Secondary compact destinations use the same restrained row language as tasks. */
+.compact-shell .compact-secondary {
+  padding: 0 8px 8px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.compact-shell .secondary-rows {
+  display: grid;
+  gap: 2px;
+}
+.compact-shell .secondary-record {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.compact-shell .secondary-record > svg,
+.compact-shell .activity-glyph svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: var(--muted);
+}
+.compact-shell .secondary-record > svg:last-child {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+.compact-shell .secondary-record > span:not(.activity-glyph) {
+  min-width: 0;
+  flex: 1;
+}
+.compact-shell .secondary-record strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.compact-shell .secondary-record small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.compact-shell .secondary-record:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.compact-shell .compact-review .compact-row {
+  min-height: 56px;
+}
+.compact-shell .compact-review .compact-task {
+  margin: 0;
+  padding: 0;
+  border-radius: 12px;
+}
+.compact-shell .compact-review .task-title > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.compact-shell .compact-review .task-title {
+  position: relative;
+  padding-right: 20px;
+}
+.compact-shell .compact-review .disclosure-chevron {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  width: 14px;
+  height: 14px;
+}
+.compact-shell .gtd-topbar .app-navigation .icon-button {
+  align-items: center;
+  justify-content: center;
+}
+.compact-shell .secondary-error {
+  padding: 8px 10px;
+  color: var(--error);
+  font-size: 13px;
+}
+.compact-shell .secondary-error button {
+  margin-left: 8px;
+}
+.secondary-resume {
+  margin: 8px 12px 16px;
+}
+.activity-detail .change {
+  margin-top: 16px;
+}

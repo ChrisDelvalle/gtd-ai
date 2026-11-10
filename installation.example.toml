@@ -1,0 +1,16 @@
+# Copy to installation.toml. State and credentials must be outside the checkout.
+state_dir = "/srv/gtd"
+environment = "production"
+website_host = "tasks.example.com"
+auth_host = "auth.example.com"
+mcp_host = "mcp.example.com"
+chatgpt_host = "chatgpt-mcp.example.com"
+admin_username = "owner"
+timezone = "America/New_York"
+integrations = ["chatgpt", "claude"]
+# direct: Caddy terminates HTTPS on 80/443; tunnel: loopback HTTP ingress only.
+ingress = "direct"
+# Optional MCP-only source restrictions, separate from per-user OAuth.
+# Leave empty for general OAuth-capable MCP clients. See docs/integrations.md.
+claude_ranges = []
+chatgpt_ranges = []

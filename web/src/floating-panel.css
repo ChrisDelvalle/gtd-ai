@@ -1,0 +1,374 @@
+/* Top-layer controls share typography and theme, never participate in task layout. */
+.floating-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  z-index: 40;
+  visibility: hidden;
+  color: var(--ink);
+  font: inherit;
+  background: light-dark(#fff, #303030);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow:
+    0 10px 32px #0002,
+    0 2px 6px #0001;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.floating-panel[data-fallback] {
+  display: block;
+}
+.floating-panel::backdrop {
+  background: transparent;
+  pointer-events: none;
+}
+.floating-safe-area {
+  position: fixed;
+  visibility: hidden;
+  pointer-events: none;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  padding: var(--safe-top, env(safe-area-inset-top, 0px))
+    var(--safe-right, env(safe-area-inset-right, 0px))
+    var(--safe-bottom, env(safe-area-inset-bottom, 0px))
+    var(--safe-left, env(safe-area-inset-left, 0px));
+}
+.floating-panel.compact-menu {
+  width: 208px;
+  padding: 5px;
+}
+.floating-panel.compact-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  line-height: 18px;
+}
+.floating-panel.compact-menu svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.7;
+  flex-shrink: 0;
+}
+.floating-panel button:focus-visible,
+.floating-panel input:focus-visible,
+.floating-panel select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+.floating-panel.compact-menu hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 4px 5px;
+}
+.floating-panel.browse-filters {
+  --filter-surface: light-dark(#fff, #303030);
+  width: 360px;
+  padding: 12px;
+  margin: 0;
+  align-items: stretch;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.floating-panel.browse-filters:popover-open,
+.floating-panel.browse-filters[data-fallback] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.floating-panel.browse-filters label {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+}
+.filter-heading {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+  margin: -12px -12px 0;
+  padding: 6px 12px;
+  background: var(--filter-surface);
+  border-bottom: 1px solid var(--border);
+}
+.filter-heading > span {
+  font-weight: 500;
+}
+.floating-panel.browse-filters .filter-heading button {
+  min-height: 32px;
+  padding: 4px 0 4px 12px;
+  font-size: 12px;
+  font-weight: 400;
+  margin: 0;
+}
+.floating-panel.browse-filters label.filter-sort {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.floating-panel.browse-filters select,
+.floating-panel.browse-filters .filter-date-value input {
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  padding: 6px 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  box-sizing: border-box;
+}
+.floating-panel.browse-filters select {
+  padding-right: 30px;
+}
+.floating-panel.browse-filters label.checkbox {
+  padding: 2px 0;
+  font-size: 14px !important;
+  min-height: 36px;
+}
+.status-filters,
+.filter-range {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.status-filters,
+.filter-options,
+.filter-range-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+.filter-range-fields {
+  gap: 8px;
+}
+.floating-panel.browse-filters legend {
+  padding: 0;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.floating-panel.browse-filters .status-filters legend {
+  margin-bottom: 4px;
+  font-weight: 400;
+}
+.floating-panel.browse-filters input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px;
+  min-height: 0;
+  flex-shrink: 0;
+  margin: 0;
+}
+.filter-options {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+.floating-panel.browse-filters .filter-date label {
+  display: block;
+  margin-bottom: 4px;
+}
+.filter-date-control {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.filter-date-value {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.floating-panel.browse-filters .filter-date-value input {
+  border: 0;
+}
+.filter-date-value input::-webkit-calendar-picker-indicator {
+  width: 14px;
+  margin: 0;
+  padding: 0;
+}
+.filter-date-placeholder {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* WebKit paints today for an empty native date input. Keep its picker and
+   keyboard editor, but show an honest empty value when not editing. */
+.filter-date-control[data-empty] input:not(:focus) {
+  color: transparent;
+}
+.filter-date-control[data-empty] input:not(:focus)::-webkit-date-and-time-value,
+.filter-date-control[data-empty] input:not(:focus)::-webkit-datetime-edit {
+  visibility: hidden;
+}
+.filter-date-value:focus-within .filter-date-placeholder {
+  display: none;
+}
+.floating-panel.browse-filters .filter-date-clear {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  margin: 0;
+}
+.filter-date-clear svg {
+  width: 14px;
+  height: 14px;
+}
+.filter-date-clear:disabled {
+  visibility: hidden;
+}
+@media (max-width: 359px) {
+  .filter-range-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (pointer: coarse) {
+  .floating-panel.browse-filters label.checkbox,
+  .floating-panel.browse-filters .filter-heading button,
+  .floating-panel.browse-filters .filter-date-clear {
+    min-height: 44px;
+  }
+  .floating-panel.browse-filters .filter-date-clear {
+    flex-basis: 36px;
+    width: 36px;
+  }
+  .floating-panel.browse-filters select,
+  .floating-panel.browse-filters .filter-date-value input {
+    height: 44px;
+    min-height: 44px;
+  }
+  /* Avoid iOS focus zoom on editable native fields. */
+  .floating-panel.browse-filters .filter-date-value input {
+    font-size: 16px;
+  }
+}
+.select-control {
+  position: relative;
+  display: block;
+}
+.select-control select {
+  appearance: none;
+  padding-right: 32px;
+}
+.select-control > svg {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+#gtd-overlay-space {
+  height: 0;
+  pointer-events: none;
+  transition: height 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.floating-panel[data-ready] {
+  animation: reveal-panel 130ms ease-out;
+}
+.floating-panel.sidebar-settings[data-ready] {
+  transform-origin: bottom right;
+  animation: reveal-settings 130ms ease-out;
+}
+@keyframes reveal-settings {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes reveal-panel {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #gtd-overlay-space {
+    transition: none;
+  }
+  .floating-panel[data-ready],
+  .floating-panel.sidebar-settings[data-ready] {
+    animation: none;
+  }
+}
+.floating-panel.compact-menu [aria-checked="true"] {
+  background: var(--tint);
+}
+.scope-menu button {
+  justify-content: space-between;
+}
+.card-search {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+.compact-toolbar:has(.card-search) {
+  min-height: 34px;
+}
+
+@media (pointer: coarse) {
+  .floating-panel.compact-menu button {
+    min-height: 44px;
+    font-size: 15px;
+  }
+}
+.scope-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.scope-button > svg {
+  width: 14px;
+  height: 14px;
+}
+.floating-panel.compact-menu button[role="menuitemradio"] {
+  justify-content: space-between;
+}

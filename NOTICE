@@ -1,0 +1,9 @@
+GTD (todo-mcp)
+Copyright (C) 2026 Chris Delvalle
+
+First-party source is licensed under AGPL-3.0-only; see LICENSE.
+GTD is an independent project, not affiliated with David Allen, OpenAI, or Anthropic.
+
+Dependencies retain their own licenses. Frontend builds include
+THIRD_PARTY_NOTICES.txt. The Keycloak compatibility patch is derived from
+Apache-2.0-licensed Keycloak source; see deploy/keycloak/NOTICE.

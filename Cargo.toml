@@ -1,0 +1,74 @@
+[package]
+name = "todo-mcp"
+version = "0.20.0"
+edition = "2024"
+rust-version = "1.93"
+description = "A self-hosted GTD task system for people and AI assistants"
+license = "AGPL-3.0-only"
+repository = "https://github.com/ChrisDelvalle/todo-mcp"
+default-run = "todo-mcp"
+
+[[bin]]
+name = "gtd-account-server"
+path = "src/account_server_main.rs"
+required-features = ["postgres-storage"]
+
+[[bin]]
+name = "gtd-migrate"
+path = "src/migration_main.rs"
+required-features = ["postgres-operator"]
+
+[[bin]]
+name = "gtd-activity-migrate"
+path = "src/activity_migration_main.rs"
+required-features = ["postgres-operator"]
+
+[features]
+# Local benchmark binaries only. Normal releases always use the real clock.
+benchmark-clock = []
+# Multi-user website and authenticated MCP service.
+postgres-storage = ["dep:postgres", "dep:r2d2", "dep:r2d2_postgres", "dep:jsonwebtoken", "dep:openidconnect", "uuid/serde"]
+# Private offline tooling only; omitted from the application image.
+postgres-operator = ["postgres-storage"]
+# Manual capacity experiments only; absent from ordinary regression/release builds.
+workflow-benchmarks = ["postgres-storage"]
+
+[dependencies]
+axum = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+rmcp = { version = "3.5", features = ["transport-io"] }
+rusqlite = { version = "0.41.1", features = ["bundled", "backup", "functions"] }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "process", "io-util", "net", "fs", "time", "sync"] }
+tower-http = { version = "0.6", features = ["fs", "limit", "set-header"] }
+nix = { version = "0.30", features = ["signal", "process"] }
+uuid = { version = "1", features = ["v4"] }
+url = "2"
+sha2 = "=0.10.9"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+chrono-tz = "0.10"
+rrule = "0.14"
+charabia = "=0.10.0"
+axum-login = "=0.18.0"
+tower-sessions = { version = "=0.14.0", default-features = false, features = ["axum-core"] }
+bcrypt = "=0.19.3"
+async-trait = "0.1"
+time = "0.3"
+postgres = { version = "=0.19.14", features = ["with-uuid-1"], optional = true }
+r2d2 = { version = "=0.8.10", optional = true }
+r2d2_postgres = { version = "=0.18.2", optional = true }
+jsonwebtoken = { version = "=11.1.0", default-features = false, features = ["aws_lc_rs", "use_pem"], optional = true }
+openidconnect = { version = "=4.0.1", default-features = false, features = ["reqwest-blocking", "rustls-tls", "timing-resistant-secret-traits"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+http-body-util = "0.1"
+
+# Apple strip can produce a mis-aligned LINKEDIT string pool in this proc macro.
+# Keep its build-time metadata; the application still uses the optimized profile.
+[profile.release.package.include-flate-codegen]
+strip = "none"

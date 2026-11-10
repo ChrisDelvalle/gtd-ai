@@ -1,0 +1,38 @@
+# Build definitions only. deploy/gtd.py prepares a private runtime Compose file.
+# No installation state, credentials, or local image IDs belong in source control.
+services:
+  service:
+    image: gtd-service:${GTD_VERSION:-0.20.0}
+    build:
+      context: .
+      dockerfile: deploy/multi-user/Dockerfile
+      args: &source
+        GTD_SOURCE_REVISION: ${GTD_SOURCE_REVISION:-development}
+        GTD_SOURCE_URL: ${GTD_SOURCE_URL:-https://github.com/ChrisDelvalle/todo-mcp}
+      target: service
+  adapter:
+    image: gtd-adapter:${GTD_VERSION:-0.20.0}
+    build:
+      context: .
+      dockerfile: deploy/multi-user/Dockerfile
+      args: *source
+      target: adapter
+  operator:
+    image: gtd-operator:${GTD_VERSION:-0.20.0}
+    build:
+      context: .
+      dockerfile: deploy/multi-user/Dockerfile
+      args: *source
+      target: operator
+  identity:
+    image: gtd-identity:${GTD_VERSION:-0.20.0}
+    build:
+      context: .
+      dockerfile: deploy/multi-user/Dockerfile.identity
+      args:
+        PATCHED_KEYCLOAK: gtd-keycloak:26.8.1-offline-resource-1
+  gateway:
+    image: gtd-gateway:${GTD_VERSION:-0.20.0}
+    build:
+      context: .
+      dockerfile: deploy/multi-user/Dockerfile.gateway

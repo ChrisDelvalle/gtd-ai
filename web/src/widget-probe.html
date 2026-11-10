@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Private GTD connection check</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font:
+          16px system-ui,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+      }
+      h2 {
+        margin: 0 0 12px;
+      }
+      button {
+        padding: 8px 16px;
+        font: inherit;
+      }
+      li {
+        padding: 6px 0;
+      }
+      #status {
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Private GTD connection check</h2>
+    <p id="status" role="status">HTML loaded. Starting the ChatGPT bridge…</p>
+    <ul id="tasks"></ul>
+    <button id="refresh" disabled>Refresh tasks</button>
+    <small>Read-only connection test · v1</small>
+    <script>
+      // Deliberately dependency-free, following the official MCP Apps quickstart.
+      // This distinguishes host/resource loading failures from application failures.
+      const status = document.getElementById("status");
+      const tasks = document.getElementById("tasks");
+      const refresh = document.getElementById("refresh");
+      let id = 0;
+      let filters = {};
+      const pending = new Map();
+      const send = (message) =>
+        window.parent.postMessage({ jsonrpc: "2.0", ...message }, "*");
+      const request = (method, params) =>
+        new Promise((resolve, reject) => {
+          const next = ++id;
+          const timeout = setTimeout(() => {
+            pending.delete(next);
+            reject(new Error("Host response timed out"));
+          }, 20000);
+          pending.set(next, { resolve, reject, timeout });
+          send({ id: next, method, params });
+        });
+      const render = (result) => {
+        if (result?.isError) throw new Error("The task read failed");
+        const items = result?.structuredContent?.items;
+        if (!Array.isArray(items)) return;
+        tasks.replaceChildren();
+        for (const task of items) {
+          const li = document.createElement("li");
+          li.textContent = `${task.title} · ${task.status}${task.deleted ? " · deleted" : ""}`;
+          tasks.append(li);
+        }
+        status.textContent = `Connected. Received ${items.length} tasks. No records changed.`;
+        send({
+          method: "ui/notifications/size-changed",
+          params: { height: document.documentElement.scrollHeight },
+        });
+      };
+      window.addEventListener("message", (event) => {
+        if (event.source !== window.parent || event.data?.jsonrpc !== "2.0")
+          return;
+        const message = event.data;
+        if (message.id !== undefined && pending.has(message.id)) {
+          const p = pending.get(message.id);
+          pending.delete(message.id);
+          clearTimeout(p.timeout);
+          message.error
+            ? p.reject(new Error("Host rejected the bridge request"))
+            : p.resolve(message.result);
+        } else if (message.method === "ui/notifications/tool-input") {
+          filters = message.params?.arguments || {};
+        } else if (message.method === "ui/notifications/tool-result") {
+          try {
+            render(message.params);
+          } catch (e) {
+            status.textContent = e.message;
+          }
+        } else if (message.method === "ping" && message.id !== undefined) {
+          send({ id: message.id, result: {} });
+        }
+      });
+      request("ui/initialize", {
+        appInfo: { name: "private-gtd-connection-check", version: "1.0.0" },
+        appCapabilities: {},
+        protocolVersion: "2026-01-26",
+      })
+        .then(() => {
+          status.textContent = "Bridge connected. Waiting for task data…";
+          send({ method: "ui/notifications/initialized", params: {} });
+          refresh.disabled = false;
+        })
+        .catch((e) => {
+          status.textContent = e.message;
+        });
+      refresh.addEventListener("click", async () => {
+        refresh.disabled = true;
+        try {
+          render(
+            await request("tools/call", {
+              name: "list_items",
+              arguments: filters,
+            }),
+          );
+        } catch (e) {
+          status.textContent = e.message;
+        } finally {
+          refresh.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

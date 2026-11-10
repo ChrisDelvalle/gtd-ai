@@ -1,0 +1,156 @@
+.users-page {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+.users-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.users-toolbar button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.users-list > li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.user-name {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.user-name strong,
+.user-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-name strong {
+  font-weight: 500;
+}
+.user-name span,
+.user-name small,
+.user-status {
+  font-size: 12px;
+  color: var(--muted);
+}
+.user-status {
+  flex-shrink: 0;
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+.user-dialog {
+  width: min(460px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  background: var(--canvas);
+  color: var(--ink);
+}
+.user-dialog::backdrop {
+  background: #0006;
+}
+.user-dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.user-dialog-heading h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 550;
+}
+.user-dialog p {
+  line-height: 1.5;
+  font-size: 14px;
+}
+.timezone-dialog p {
+  margin-block: 12px 0;
+}
+.user-dialog .user-operation-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.user-dialog label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  margin: 0;
+  min-width: 0;
+}
+.user-dialog input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 400;
+  margin: 0;
+}
+.user-invite-fields {
+  display: grid;
+  gap: 16px;
+}
+.user-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+.user-dialog-actions button,
+.user-credential > button {
+  min-height: 44px;
+}
+.user-credential {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px;
+  margin-top: 14px;
+}
+.user-credential small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.user-dialog .user-error {
+  color: var(--ink);
+  padding-block: 8px;
+}
+.sidebar-account-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 12px;
+}
+@media (pointer: coarse) {
+  .users-page .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

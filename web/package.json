@@ -1,0 +1,26 @@
+{
+  "name": "gtd-web",
+  "version": "0.20.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && node build.mjs",
+    "test": "node --experimental-transform-types --test mutations.test.ts coalesced-api.test.mjs environment-guard.test.mjs website-identity.test.mjs widget-identity.test.mjs && playwright test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "lucide-react": "1.49.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-markdown": "10.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2"
+  },
+  "license": "AGPL-3.0-only"
+}

@@ -1,0 +1,107 @@
+[
+  {
+    "package": "axum-login",
+    "version": "0.18.0",
+    "url": "https://raw.githubusercontent.com/maxcountryman/axum-login/93ec03235d3e8eecf0ca9fec9d24840903541caa/LICENSE",
+    "sha256": "f15bf5474582f725b331ee8a5e19121ac3f6cd5c4fe508b5c7172017241e5129",
+    "file": "third_party/licenses/axum-login-0.18.0.txt"
+  },
+  {
+    "package": "charabia",
+    "version": "0.10.0",
+    "url": "https://raw.githubusercontent.com/meilisearch/charabia/bc63b9860434f06cf78b51bb0eab00aaefb69f15/LICENSE",
+    "sha256": "b0b5aee3ad1a8cad84dd3b73dbac346bf2b903b33ea90b1d1b3d0800744f5a74",
+    "file": "third_party/licenses/charabia-0.10.0.txt"
+  },
+  {
+    "package": "include-flate-codegen",
+    "version": "0.3.4",
+    "url": "https://raw.githubusercontent.com/SOF3/include-flate/4118d8e5d30b81c678f889b492945c39c019f846/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "file": "third_party/licenses/include-flate-codegen-0.3.4.txt"
+  },
+  {
+    "package": "include-flate-compress",
+    "version": "0.3.4",
+    "url": "https://raw.githubusercontent.com/SOF3/include-flate/4118d8e5d30b81c678f889b492945c39c019f846/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "file": "third_party/licenses/include-flate-compress-0.3.4.txt"
+  },
+  {
+    "package": "irg-kvariants",
+    "version": "0.1.1",
+    "url": "https://raw.githubusercontent.com/meilisearch/charabia/ae07a589ab5fa825e7fb68777b76f81e155be1b9/LICENSE",
+    "sha256": "745708d33cb650e9b5c6efb490f2560678d1e21394b87a1d42d24d0051faa732",
+    "file": "third_party/licenses/irg-kvariants-0.1.1.txt"
+  },
+  {
+    "package": "jieba-macros",
+    "version": "0.10.4",
+    "url": "https://raw.githubusercontent.com/messense/jieba-rs/9faccca490d8e797a14d6daffed2a96de9629df7/LICENSE",
+    "sha256": "92257c8d1c7a059fa02720b34fce017574a990bed14cee8f565597f4fbfb1f13",
+    "file": "third_party/licenses/jieba-macros-0.10.4.txt"
+  },
+  {
+    "package": "jieba-rs",
+    "version": "0.10.4",
+    "url": "https://raw.githubusercontent.com/messense/jieba-rs/9faccca490d8e797a14d6daffed2a96de9629df7/LICENSE",
+    "sha256": "92257c8d1c7a059fa02720b34fce017574a990bed14cee8f565597f4fbfb1f13",
+    "file": "third_party/licenses/jieba-rs-0.10.4.txt"
+  },
+  {
+    "package": "lindera",
+    "version": "5.3.0",
+    "url": "https://raw.githubusercontent.com/lindera/lindera/b805dbe17cdd71b9aec319d604dfea96933744b4/LICENSE",
+    "sha256": "d37249886de3136db31717f15f6ade215a36fbed1c782381e38b2bf6047e8ec4",
+    "file": "third_party/licenses/lindera-5.3.0.txt"
+  },
+  {
+    "package": "lindera-dictionary",
+    "version": "5.3.0",
+    "url": "https://raw.githubusercontent.com/lindera/lindera/b805dbe17cdd71b9aec319d604dfea96933744b4/LICENSE",
+    "sha256": "d37249886de3136db31717f15f6ade215a36fbed1c782381e38b2bf6047e8ec4",
+    "file": "third_party/licenses/lindera-dictionary-5.3.0.txt"
+  },
+  {
+    "package": "lindera-ko-dic",
+    "version": "5.3.0",
+    "url": "https://raw.githubusercontent.com/lindera/lindera/b805dbe17cdd71b9aec319d604dfea96933744b4/LICENSE",
+    "sha256": "d37249886de3136db31717f15f6ade215a36fbed1c782381e38b2bf6047e8ec4",
+    "file": "third_party/licenses/lindera-ko-dic-5.3.0.txt"
+  },
+  {
+    "package": "lindera-unidic",
+    "version": "5.3.0",
+    "url": "https://raw.githubusercontent.com/lindera/lindera/b805dbe17cdd71b9aec319d604dfea96933744b4/LICENSE",
+    "sha256": "d37249886de3136db31717f15f6ade215a36fbed1c782381e38b2bf6047e8ec4",
+    "file": "third_party/licenses/lindera-unidic-5.3.0.txt"
+  },
+  {
+    "package": "rrule",
+    "version": "0.14.0",
+    "url": "https://raw.githubusercontent.com/fmeringdal/rust-rrule/3843456f739d399cfbeff81288c36a66e8e38b83/LICENSE-MIT",
+    "sha256": "986e6c03763b9d938ea88fcfe4ca22cdb98f10f13e7f44d3e4daf7e48a3623ce",
+    "file": "third_party/licenses/rrule-0.14.0.txt"
+  },
+  {
+    "package": "tower-sessions-core",
+    "version": "0.14.0",
+    "url": "https://raw.githubusercontent.com/maxcountryman/tower-sessions/b58463dc93fac49669e33f4b98af5455f0f332c2/LICENSE",
+    "sha256": "81e729db46699dc38143ab423791259022f35ef8b331702d4540a0f3dbe3d7bf",
+    "file": "third_party/licenses/tower-sessions-core-0.14.0.txt"
+  },
+  {
+    "package": "whatlang",
+    "version": "0.18.0",
+    "url": "https://raw.githubusercontent.com/greyblake/whatlang-rs/584009bbdbd715681fc1c144ac986814104bedbc/LICENSE",
+    "sha256": "9fb62b415784b27e358a03677cac6b56de73425f4fdbb5f4ecf19650af5dfe0c",
+    "file": "third_party/licenses/whatlang-0.18.0.txt"
+  },
+  {
+    "package": "rsqlite-vfs",
+    "version": "0.1.1",
+    "url": "https://raw.githubusercontent.com/Spxg/sqlite-wasm-rs/1bb309784f25c401ddf95131dcde4c4cdad7aee7/LICENSE",
+    "sha256": "e1c1975c3474cce31722836f101a40ffaf1cc784e4d2f38ce3e77b9712934e78",
+    "file": "third_party/licenses/rsqlite-vfs-0.1.1.txt"
+  }
+]
