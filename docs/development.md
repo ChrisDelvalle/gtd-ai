@@ -62,6 +62,9 @@ change, and no test retries are enabled. Docker cache exports are limited to the
 operator target, which also includes the service's Rust build, to avoid uploading
 the same layers from every image. They contain build artifacts, never installation
 configuration or test databases.
+The image cache is most effective for frontend and documentation changes. Rust
+source or lockfile changes can require a full release rebuild: BuildKit's local
+layer export does not preserve the compiler's mutable cache mounts.
 
 Browser suites intentionally use one worker per engine: some integration tests
 share the disposable server. Parallelizing those before isolating their state

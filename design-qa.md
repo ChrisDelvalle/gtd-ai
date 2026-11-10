@@ -121,3 +121,37 @@ Compose's resolved Bake definition and grant access only to the selected cache
 directory. A disposable scratch-image check passed both cold export and warm
 import with filesystem checks enabled. Uncached builds retain the ordinary
 Compose path. The failed run is not counted as release acceptance.
+
+Measured completed jobs in warm run `42787879084`, compared with the uncached
+baseline `42771159671` (same runner class; individual runs, not latency guarantees):
+
+| Work | Baseline | Warm cache |
+| --- | ---: | ---: |
+| Deployment image build | 14m 48s | 1m 01s |
+| Full installation/recovery/operator job | 20m 08s | 7m 16s |
+| Browser build preparation | 2m 25–30s | 15–16s |
+| Source and PostgreSQL job | 6m 58s | 3m 08s |
+| Dependency/advisory job | 2m 26s | 36s |
+
+The warm installation rehearsal passed, including identity, backup, and recovery
+checks. The 114 demo cases passed again. Twenty focused checks against the public
+Pages site also passed in Chromium/WebKit: mobile drawer/composer, task selections,
+reset, system themes, retained focus, streaming order, expansion, and static-only
+network requests. Inspected the published desktop split screenshot. These remain
+browser-emulated device checks; no live model test or new physical-device test ran.
+
+The image-build comparison reused unchanged Rust sources. Rust or lockfile
+changes can still require a cold release compilation; the layer cache does not
+export mutable compiler cache mounts. Keeping those warm across source changes
+would be a separate build-layout change, outside this small CI pass.
+
+Final acceptance: run `42787879084` passed on its first attempt after the cache
+correction. Application browser coverage passed 380 Chromium and 379 WebKit
+cases; the existing engine/environment-specific skips remain unchanged. Including
+Pages publication, the observed critical path fell from 20m 23s to 15m 08s,
+excluding queue time. The full browser suites now determine that duration.
+
+GitHub Pages serves revision `cdb475e1fc31888f553cebc292cb3655d2ae1a23`.
+Four additional post-publication Chromium/WebKit smoke checks passed against that
+revision's website and chat entry points. The working tree contains no generated
+screenshots, test output, or private deployment material for this change.
