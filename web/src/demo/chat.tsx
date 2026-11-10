@@ -24,6 +24,7 @@ import { DemoConversations } from "./conversations";
 import { loadDemo } from "./bootstrap";
 import { useViewerPane } from "./viewer-pane";
 import { CopyMessage } from "./copy-message";
+import { useDemoTheme } from "./theme";
 type Progress = {
   sent: boolean;
   stage: number;
@@ -52,8 +53,8 @@ const selected = (): ScenarioId =>
   scenarios.find((s) => s.id === location.hash.slice(1))?.id || "pickup";
 function Chat() {
   const [current, setCurrent] = useState(selected),
-    [progress, setProgress] = useState(initial),
-    [theme, setTheme] = useState("dark");
+    [progress, setProgress] = useState(initial);
+  const [theme, toggleTheme] = useDemoTheme();
   const [sidebar, setSidebar] = useState(() => innerWidth >= 1000),
     [expanded, setExpanded] = useState<string | null>(null);
   const [sessions] = useState(() => new DemoConversations(loadDemo));
@@ -116,7 +117,6 @@ function Chat() {
       );
   }
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
     for (const id of frames.current.keys())
       post(id, "context", {
         theme,
@@ -349,7 +349,7 @@ function Chat() {
           <div>
             <button
               aria-label={`Use ${theme === "dark" ? "light" : "dark"} theme`}
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={toggleTheme}
             >
               {theme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
             </button>

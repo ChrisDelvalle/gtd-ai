@@ -1,5 +1,87 @@
 import { test, expect, type Page } from "@playwright/test";
 const base = "/gtd-ai";
+
+for (const surface of ["website", "chat"])
+  for (const initial of ["light", "dark"] as const) {
+    test(`${surface} follows system theme with a local override from ${initial}`, async ({
+      page,
+    }, info) => {
+      const opposite = initial === "light" ? "dark" : "light";
+      await page.emulateMedia({
+        colorScheme: initial,
+        reducedMotion: "reduce",
+      });
+      await page.goto(
+        `${base}/${surface}/${surface === "chat" ? "#energy" : ""}`,
+      );
+      const root = page.locator("html");
+      await expect(root).toHaveAttribute("data-theme", initial);
+      await expect(
+        page.getByRole("button", { name: `Use ${opposite} theme` }),
+      ).toBeVisible();
+      await page.emulateMedia({ colorScheme: opposite });
+      await expect(root).toHaveAttribute("data-theme", opposite);
+      await page.getByRole("button", { name: `Use ${initial} theme` }).click();
+      await expect(root).toHaveAttribute("data-theme", initial);
+      await page.emulateMedia({ colorScheme: initial });
+      await page.emulateMedia({ colorScheme: opposite });
+      await expect(root).toHaveAttribute("data-theme", initial);
+      if (surface === "chat") {
+        // Cards created after a manual override inherit the host, not the OS.
+        await page
+          .getByRole("button", { name: "Send prepared example" })
+          .click();
+        const card = page.frameLocator(
+          'iframe[title="GTD widget — Twenty minutes, low energy"]',
+        );
+        await expect(card.locator("html")).toHaveAttribute(
+          "data-theme",
+          initial,
+        );
+        await card
+          .getByRole("button", { name: "Expand view", exact: true })
+          .click();
+        await expect(card.locator("html")).toHaveAttribute(
+          "data-theme",
+          initial,
+        );
+        await page.screenshot({
+          path: info.outputPath("theme-override-expanded.png"),
+        });
+        await page.getByRole("button", { name: "Close expanded view" }).click();
+        await page
+          .getByRole("button", { name: `Use ${opposite} theme` })
+          .click();
+        await expect(card.locator("html")).toHaveAttribute(
+          "data-theme",
+          opposite,
+        );
+      }
+      await page.reload();
+      await expect(root).toHaveAttribute("data-theme", opposite);
+      await expect(
+        page.getByRole("button", { name: `Use ${initial} theme` }),
+      ).toBeVisible();
+      if (surface === "chat") {
+        await page
+          .getByRole("button", { name: "Send prepared example" })
+          .click();
+        const card = page.frameLocator(
+          'iframe[title="GTD widget — Twenty minutes, low energy"]',
+        );
+        await expect(card.locator("html")).toHaveAttribute(
+          "data-theme",
+          opposite,
+        );
+        await page.emulateMedia({ colorScheme: initial });
+        await expect(root).toHaveAttribute("data-theme", initial);
+        await expect(card.locator("html")).toHaveAttribute(
+          "data-theme",
+          initial,
+        );
+      }
+    });
+  }
 // Child-frame click stability does not include an animated parent iframe in
 // WebKit. Verify the pane has reached its intended edge before interacting.
 async function expandedAtRest(page: Page) {
@@ -18,6 +100,7 @@ async function expandedAtRest(page: Page) {
     .toBeLessThan(0.1);
 }
 test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
@@ -153,6 +236,7 @@ for (const width of [390, 1440]) {
     page,
   }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`${base}/chat/`);
     await page.getByRole("button", { name: "Send prepared example" }).click();
     let frame = page.frameLocator(
@@ -323,6 +407,7 @@ test("charts, recurrence browsing, and keyboard expansion", async ({
       exact: true,
     }),
   ).toBeVisible();
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/chat/#energy`);
   await page.getByRole("button", { name: "Use light theme" }).click();
   await page.getByRole("button", { name: "Send prepared example" }).click();
@@ -365,6 +450,7 @@ test("failed fixture load offers a working local retry", async ({ page }) => {
 for (const width of [800, 801, 999, 1000]) {
   test(`viewer fits its pane at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`${base}/chat/#energy`);
     await page.getByRole("button", { name: "Send prepared example" }).click();
     const frame = page.frameLocator(
@@ -402,6 +488,7 @@ for (const width of [390, 1440]) {
     page,
   }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`${base}/chat/`);
     if (width === 390)
       await page.getByRole("button", { name: "Use light theme" }).click();
@@ -494,6 +581,7 @@ test("reduced motion skips streaming and card transitions", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/chat/#capture`);
   await page.getByRole("button", { name: "Send prepared example" }).click();
   await expect(page.locator(".streamed-reply")).toBeVisible();
@@ -501,8 +589,9 @@ test("reduced motion skips streaming and card transitions", async ({
     "false",
   );
   await expect(page.locator(".streamed-reply")).toContainText(
-    "No messages sent.",
+    "Library bag hook: saved in Someday, with no deadline.",
   );
+  await expect(page.locator(".streamed-reply ul > li")).toHaveCount(3);
   await expect(page.locator(".chat-result")).toBeVisible();
   expect(
     await page
@@ -529,6 +618,7 @@ for (const width of [390, 1440]) {
     page,
   }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`${base}/chat/#pickup`);
     const sidebarType = await page
       .locator(".chat-history-row")
@@ -659,6 +749,7 @@ for (const width of [390, 1440]) {
     page,
   }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`${base}/chat/#inbox`);
     if (width === 390)
       await page.getByRole("button", { name: "Use light theme" }).click();
@@ -754,6 +845,7 @@ for (const width of [390, 880, 1440]) {
   }, info) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.emulateMedia({ colorScheme: "dark" });
     await page.goto(`${base}/chat/#energy`);
     await expect(
       page
@@ -802,6 +894,7 @@ for (const width of [360, 768, 1280, 1920])
     test(`chat fidelity matrix ${width} ${theme}`, async ({ page }, info) => {
       await page.setViewportSize({ width, height: width < 801 ? 844 : 1000 });
       await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(`${base}/chat/#energy`);
       if (theme === "light")
         await page.getByRole("button", { name: "Use light theme" }).click();
@@ -924,6 +1017,7 @@ test("local working sequence and copy actions", async ({ page }) => {
       },
     });
   });
+  await page.emulateMedia({ colorScheme: "dark" });
   await page.goto(`${base}/chat/#energy`);
   await page.getByRole("button", { name: "Send prepared example" }).click();
   await expect(page.locator(".work-status")).toHaveText("Working…");
@@ -959,6 +1053,7 @@ for (const [width, height] of [
     }, info) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.emulateMedia({ colorScheme: "dark" });
       await page.goto(`${base}/chat/#capture`);
       if (theme === "light")
         await page.getByRole("button", { name: "Use light theme" }).click();

@@ -7,6 +7,7 @@ import type { Launch } from "../app-context";
 import { ZONE } from "./domain";
 import { prepareClock, localLinks, preparePreferences } from "./bootstrap";
 import { cardCount, scenarios, type ScenarioId } from "./scenarios";
+import { systemTheme } from "./theme";
 const [scenario, index] = location.hash.slice(1).split(":");
 const id = scenario as ScenarioId,
   card = Number(index || 0);
@@ -50,7 +51,7 @@ const api: Api = {
 function Card() {
   const [mode, setMode] = useState<"inline" | "fullscreen">("inline");
   const [height, setHeight] = useState(innerHeight);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState(systemTheme);
   const [restoreFocus, setRestoreFocus] = useState(false);
   const [launch, setLaunch] = useState<Launch | null>(null);
   useEffect(() => {
@@ -110,6 +111,7 @@ function Card() {
   }, [mode]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
   }, [theme]);
   useEffect(() => {
     if (!restoreFocus || mode !== "inline") return;

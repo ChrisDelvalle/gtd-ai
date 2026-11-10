@@ -1,21 +1,16 @@
-import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Moon, Sun, RotateCcw } from "lucide-react";
 import { Application } from "../application";
 import { useHashRouting } from "../routes";
 import { DemoStore } from "./store";
 import { loadDemo, localLinks, preparePreferences } from "./bootstrap";
+import { useDemoTheme } from "./theme";
 useHashRouting();
 localLinks();
 preparePreferences("website", "website");
 const root = createRoot(document.getElementById("root")!);
 function Website({ store }: { store: DemoStore }) {
-  const [theme, setTheme] = useState("light");
-  function toggle() {
-    const next = theme === "light" ? "dark" : "light";
-    document.documentElement.dataset.theme = next;
-    setTheme(next);
-  }
+  const [theme, toggle] = useDemoTheme();
   return (
     <>
       <div className="demo-controls" aria-label="Demo controls">

@@ -69,6 +69,13 @@ for (const [name, text] of Object.entries(styles)) {
   await writeFile(`${out}/assets/${file}`, text);
   sheets[name] = file;
 }
+const themeInit = (
+  await transform(await readFile("src/demo/theme-init.js", "utf8"), {
+    minify: true,
+  })
+).code;
+const themeFile = `theme-${createHash("sha256").update(themeInit).digest("hex").slice(0, 12)}.js`;
+await writeFile(`${out}/assets/${themeFile}`, themeInit);
 const policy =
   "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; form-action 'none'; base-uri 'self'; object-src 'none'";
 for (const name of ["website", "chat", "widget"]) {
@@ -78,7 +85,7 @@ for (const name of ["website", "chat", "widget"]) {
   await mkdir(`${out}/${name}`, { recursive: true });
   await writeFile(
     `${out}/${name}/index.html`,
-    `<!doctype html><html lang="en" data-theme="${name === "website" ? "light" : "dark"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><title>GTD AI — ${name === "website" ? "Website demo" : name === "chat" ? "Chat demo" : "Interactive widget"}</title><link rel="icon" href="../assets/gtd-icon.png"><link rel="stylesheet" href="../assets/${sheets[name === "chat" ? "chat" : "app"]}"></head><body${name === "widget" ? ' class="widget"' : ""}><div id="root"></div><script type="module" src="../assets/${basename(entry)}"></script></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="${policy}"><meta name="referrer" content="no-referrer"><title>GTD AI — ${name === "website" ? "Website demo" : name === "chat" ? "Chat demo" : "Interactive widget"}</title><link rel="icon" href="../assets/gtd-icon.png"><script src="../assets/${themeFile}"></script><link rel="stylesheet" href="../assets/${sheets[name === "chat" ? "chat" : "app"]}"></head><body${name === "widget" ? ' class="widget"' : ""}><div id="root"></div><script type="module" src="../assets/${basename(entry)}"></script></body></html>`,
   );
 }
 await copyFile("src/gtd-icon.png", `${out}/assets/gtd-icon.png`);
