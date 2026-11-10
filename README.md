@@ -10,22 +10,40 @@
 
 GTD combines David Allen's [Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done)
 with the urgency-and-importance view of the [Eisenhower matrix](https://en.wikipedia.org/wiki/Time_management#Eisenhower_method).
-It is designed for an AI assistant to maintain on your behalf: capturing loose
-thoughts, organizing projects, planning concrete next actions, and keeping
-priorities current as plans change. You describe what you need in ordinary
-language; your assistant has access to the task-management tools needed to keep
-the system in order.
+You talk through your work; your assistant turns it into an organized plan.
+It can break a goal into next actions, group them into projects, track blockers,
+set deadlines and importance, and arrange work blocks. As plans change, it can
+update those details and keep urgent work visible. You don't have to translate
+every conversation into forms or maintain all those fields yourself.
 
-Each task also has a dedicated space for agent notes, kept out of the everyday
-task view. Your assistant can record decisions, progress, and the details it
-will need next time, then read them back in a fresh conversation. Your task
-descriptions stay readable, and you don't have to keep reconstructing the
-backstory.
+Separate agent notes give your assistant somewhere to preserve the working
+context behind each task: decisions, progress, open questions, and details it
+will need later. It can read those notes in a fresh conversation and pick up the
+work without filling your task descriptions with internal bookkeeping or asking
+you to explain everything again. The fields you read stay focused on what you
+need to do.
 
-GTD works best with a persistent assistant that can remember your working
-preferences and run scheduled check-ins or reviews. The aim is to make staying
-organized feel like a conversation, with as little time spent maintaining the
-system as possible.
+That structure pays off when choosing what to do, too. Effort, estimated duration,
+deadlines, dependencies, and priority let your assistant turn an everyday question
+into a precise search:
+
+> "I've got twenty minutes before my next meeting. What's a worthwhile task
+> that won't take much concentration?"
+
+You can also ask which commitments are waiting on a reply, what needs attention
+before a trip, or which small action would unblock an important project. Your
+assistant combines the relevant fields to find work that fits the situation.
+It builds and maintains that structure from your conversations, so you get the
+benefit without taking on another job organizing the data.
+
+GTD works best with a persistent, proactive assistant such as **ChatGPT Dot**
+that remembers how you like to work and can perform regular reviews and
+maintenance. With access to your email, calendar, and other sources of commitments,
+your assistant can turn new requests and upcoming events into action items,
+then keep projects, dates, and follow-ups current as circumstances change.
+You get a useful, detailed system without having to keep feeding and tidying it
+yourself: explain what matters, let your assistant organize the details, and get
+on with the work.
 
 ## Why GTD?
 
