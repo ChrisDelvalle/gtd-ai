@@ -6,6 +6,27 @@
   <img src="docs/images/home.png" width="800" alt="GTD Home with the priorities grid, featured task, and Next actions">
 </p>
 
+## About GTD
+
+GTD combines David Allen's [Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done)
+with the urgency-and-importance view of the [Eisenhower matrix](https://en.wikipedia.org/wiki/Time_management#Eisenhower_method).
+It is designed for an AI assistant to maintain on your behalf: capturing loose
+thoughts, organizing projects, planning concrete next actions, and keeping
+priorities current as plans change. You describe what you need in ordinary
+language; your assistant has access to the task-management tools needed to keep
+the system in order.
+
+Each task also has a dedicated space for agent notes, kept out of the everyday
+task view. Your assistant can record decisions, progress, and the details it
+will need next time, then read them back in a fresh conversation. Your task
+descriptions stay readable, and you don't have to keep reconstructing the
+backstory.
+
+GTD works best with a persistent assistant that can remember your working
+preferences and run scheduled check-ins or reviews. The aim is to make staying
+organized feel like a conversation, with as little time spent maintaining the
+system as possible.
+
 ## Why GTD?
 
 Keeping a detailed task system up to date can become a job of its own. GTD lets
