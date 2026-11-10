@@ -264,11 +264,11 @@ test("phone-width Priorities confines scrolling to the open pop-up", async ({pag
   await list.locator(".priority-sheet-scrim").click({position: {x: 6, y: 320}});
   await expect(list).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveCSS("overflow-y", "hidden");
-  // Wheel hit testing uses WebKit's composited scroll tree. Let removal of the
-  // modal and its root scroll lock reach a paint before starting a new gesture.
-  await page.evaluate(() => new Promise<void>(resolve =>
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  await verticalGesture(page, browserName, 190, 520, -130);
+  // Linux WebKit's automated wheel input does not scroll this document even
+  // before opening the dialog. Use a real keyboard scroll to verify release;
+  // Chromium additionally exercises a native touch gesture.
+  if (browserName === "webkit") await page.keyboard.press("PageDown");
+  else await verticalGesture(page, browserName, 190, 520, -130);
   await expect.poll(background).toBeGreaterThan(before);
 });
 
