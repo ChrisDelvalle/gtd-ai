@@ -234,6 +234,12 @@ async function openSeries(page: Page, phone = false, view = "occurrences") {
     0,
   );
   await expect(page.getByLabel("Starts", { exact: true })).toHaveCount(0);
+  // The summary renders before its lazy Markdown body. A cold WebKit trace
+  // showed that body replacing its taller placeholder between pointer-down
+  // and pointer-up, moving Edit schedule away from the click. Wait for the
+  // fixture's actual notes before targeting controls beneath them.
+  if (view !== "overview")
+    await expect(page.locator(".repeat-overview:visible .task-markdown")).toBeVisible();
   if (view === "settings")
     await page
       .getByRole("button", { name: "Edit schedule", exact: true })

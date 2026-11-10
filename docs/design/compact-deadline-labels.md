@@ -38,4 +38,26 @@ usable; row elements remain vertically centered.
 - Keep production data unchanged and record physical-device/actual-host checks
   separately from browser simulations. No live model prompts are required.
 
-Acceptance results will be recorded after verification.
+## Acceptance evidence
+
+The application implementation is `aec2bcf`. The previous build failed the
+different-year regression: all three June 30 deadlines displayed the same label.
+
+- Fifteen focused Chromium checks passed. Thirty WebKit checks passed, including
+  Home, project fallback and existing planning/editing interactions.
+- Screenshots inspected at 320, 390, 480, 1280 and 1440 pixels cover phone and
+  desktop, both themes, Home/Next, and inline/expanded widgets. Geometry assertions
+  check label containment, neighboring controls and the featured row's centerline.
+- Deadline and account-year boundaries update without reads. A device timezone
+  different from the account, repeated DST hour offsets, inherited project dates,
+  skipped occurrences, completed/archived tasks and hidden deleted rows are covered.
+- Hosted staging passed two-account OAuth refresh, audience/source rejection,
+  account isolation, launch/bundle checks and served-asset verification. Staging
+  shuts down after verification. Deployment receipts and image pins remain private.
+- The existing recurrence test helper now waits for the lazy Markdown body before
+  clicking controls below it. A previous WebKit trace showed the body replacing a
+  taller placeholder during the click. The conflicted-draft scenario passed twelve
+  consecutive runs after this correction; no assertions or retries were relaxed.
+
+Full CI and the production backup/rollback gates still apply before promotion.
+No live model tests or physical-device checks are included in these results.
