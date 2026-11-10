@@ -211,6 +211,7 @@ test("creating a project in Review does not replace a retained Projects editor",
     data: {
       request_id: crypto.randomUUID(),
       title: `${prefix} original`,
+      brief: "Complete the shared-state fixture project.",
       review_date: "2020-01-01",
       notes: "Original description.",
       reason: "Synthetic shared-state regression",
@@ -251,6 +252,7 @@ test("creating a project in Review does not replace a retained Projects editor",
   await page
     .getByRole("textbox", { name: "Desired outcome", exact: true })
     .fill(`${prefix} second`);
+  await page.locator("form.project-create:visible").getByRole("textbox", {name:"Brief",exact:true}).fill("Complete the second fixture project.");
   await page
     .locator("form.project-create:visible")
     .getByRole("button", { name: "Create project", exact: true })

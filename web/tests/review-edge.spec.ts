@@ -105,9 +105,8 @@ test("a failed search exposes recovery while the search field stays open", async
     card.getByRole("button", { name: "View connection problem" }),
   ).toBeVisible();
   await expect(search).toHaveValue("offline");
-  await expect(card.getByRole("alert")).toContainText(
-    "Previously loaded tasks may not match",
-  );
+  // An unrelated query must not present the previous query's rows as matches.
+  await expect(card.locator(".compact-row:visible")).toHaveCount(0);
   await expect(card.getByRole("alert")).toContainText(
     "Search is temporarily unavailable.",
   );

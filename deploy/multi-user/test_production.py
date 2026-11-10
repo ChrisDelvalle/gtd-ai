@@ -109,6 +109,7 @@ class DockerConfiguration(ProductionFixture, unittest.TestCase):
         self.prepare()
         docker('compose','-f',str(self.root/'compose.json'),'--profile','application','config','--quiet')
         result = docker('run','--rm','--pull','never','--network','none','--read-only',
+            '--user',str(os.getuid())+':'+str(os.getgid()),
             '--cap-drop','ALL','--security-opt','no-new-privileges:true','--memory','128m','--pids-limit','64',
             '--mount','type=bind,src='+str(self.root/'gateway/Caddyfile')+',dst=/etc/caddy/Caddyfile,readonly',
             self.options['gateway_image'],'caddy','adapt','--validate','--config','/etc/caddy/Caddyfile','--adapter','caddyfile')

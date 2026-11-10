@@ -966,6 +966,7 @@ test("repeat overview retrieves omitted defaults and leaves an empty description
     template.notes,
   );
   state.series.recurrence!.segments[0].template.notes = "";
+  state.series.recurrence!.segments[0].template.brief = "";
   await page
     .getByRole("button", { name: "Back to repeats", exact: true })
     .click();

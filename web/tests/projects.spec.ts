@@ -652,6 +652,7 @@ for (const nested of [false, true]) {
     const form = page.locator(
       nested ? ".project-capture form" : "form.project-create",
     );
+    await form.getByLabel("Brief",{exact:true}).fill("Complete this recoverable test action.");
     if(nested){
       await form.getByRole("spinbutton",{name:"Remaining minutes"}).fill("30");
       await form.getByRole("combobox",{name:"Effort",exact:true}).selectOption("medium");
@@ -720,6 +721,7 @@ test("dismissing a rejected project capture never resubmits the form", async ({
     });
   });
   const form = page.locator("form.project-create");
+  await form.getByLabel("Brief",{exact:true}).fill("Complete this rejected test outcome.");
   await form
     .getByRole("button", { name: "Create project", exact: true })
     .click();

@@ -79,6 +79,7 @@ test("project URLs preserve lifecycle filters, creation and nested drafts", asyn
   await expect(page.getByRole("button", {name: "Someday projects", exact: true})).toBeVisible();
   await page.getByRole("button", {name: "Create project", exact: true}).click();
   await page.getByRole("textbox", {name: "Desired outcome", exact: true}).fill(title);
+  await page.locator("form.project-create").getByRole("textbox", {name: "Brief", exact: true}).fill("Complete the URL navigation fixture project.");
   await page.locator("form.project-create").getByRole("button", {name: "Create project", exact: true}).click();
   await expect(page).toHaveURL(/\/projects\/[a-f0-9-]{36}/);
   const projectId = new URL(page.url()).pathname.split("/").at(-1)!;
@@ -88,6 +89,7 @@ test("project URLs preserve lifecycle filters, creation and nested drafts", asyn
   const form = page.locator(".project-capture form");
   const actionTitle = `Action for ${title}`;
   await form.getByRole("textbox", {name: "Action", exact: true}).fill(actionTitle);
+  await form.getByRole("textbox", {name: "Brief", exact: true}).fill("Complete the nested fixture action.");
   await form.getByRole("combobox", {name: "Status", exact: true}).selectOption("next");
   await form.getByRole("button", {name: "Add action", exact: true}).click();
   await expect(form.getByRole("spinbutton", {name: "Remaining minutes"})).toBeFocused();

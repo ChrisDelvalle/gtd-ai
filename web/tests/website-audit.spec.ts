@@ -14,6 +14,7 @@ const fixture = {
   location: null,
 };
 async function isolate(page: Page) {
+  await page.route("**/api/view", route => route.fulfill({status:404,json:{message:"Legacy composition fixture"}}));
   await page.route("**/api/tools/list_items", (route) => {
     const args = route.request().postDataJSON();
     return route.fulfill({

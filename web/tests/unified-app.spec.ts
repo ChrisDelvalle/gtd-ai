@@ -119,7 +119,7 @@ test("shared website preserves disclosures when revisiting a task view", async (
 for (const width of [390, 900]) {
   test(`everyday destinations share bounded navigation at ${width}px`, async ({page}, info) => {
     const {frame, surface, requests} = await openWidget(page, {width, launch:"home"});
-    const names = ["Home", "Next actions", "Inbox", "Waiting", "Blocked", "Projects", "Repeating", "Review", "Someday", "All tasks", "Done", "Archive", "Activity"];
+    const names = ["Home", "Next", "Inbox", "Waiting", "Blocked", "Projects", "Repeating", "Review", "Someday", "All tasks", "Done", "Archive", "Activity"];
     for (const name of names) {
       await frame.getByRole("button", {name:"GTD navigation", exact:true}).click();
       await frame.getByRole("menuitemradio", {name, exact:true}).click();
@@ -134,7 +134,7 @@ for (const width of [390, 900]) {
       if (["Home", "Repeating", "Activity"].includes(name)) await page.screenshot({path:info.outputPath(`${name}-${width}.png`)});
     }
     const calls = await requests("tools/call");
-    expect(calls.every(m => ["list_items","list_projects","list_occurrences","list_changes"].includes(m.params.name))).toBe(true);
+    expect(calls.every(m => ["list_items","list_projects","list_occurrences","list_changes","view_snapshot","widget_pages"].includes(m.params.name))).toBe(true);
     expect(calls.some(m => m.params.arguments.include_agent_notes)).toBe(false);
   });
 }
@@ -157,7 +157,7 @@ test("mobile expanded inspector has an opaque surface and inset controls", async
   const style=await panel.evaluate(e=>({background:getComputedStyle(e).backgroundColor,padding:parseFloat(getComputedStyle(e).paddingLeft)}));
   expect(style.background).not.toBe("rgba(0, 0, 0, 0)");
   expect(style.padding).toBeGreaterThanOrEqual(16);
-  const field=frame.getByRole("textbox",{name:"Description",exact:true});
+  const field=frame.getByRole("textbox",{name:"Brief",exact:true});
   const box=(await field.boundingBox())!, bounds=(await panel.boundingBox())!;
   expect(box.x).toBeGreaterThan(bounds.x);
   expect(box.x+box.width).toBeLessThan(bounds.x+bounds.width);
@@ -173,7 +173,7 @@ test('compact Home shows a short overview and View all opens the task list', asy
   await changeMode('inline');
   await expect(home.getByRole('button',{name:/^Details:/})).toHaveCount(3);
   await frame.getByRole('region',{name:'Next',exact:true}).getByRole('button',{name:'View all',exact:true}).click();
-  await expect(frame.getByRole('button',{name:'GTD navigation',exact:true})).toHaveText('Next actions');
+  await expect(frame.getByRole('button',{name:'GTD navigation',exact:true})).toHaveText('Next');
 });
 
 test('Help opened from the expanded sidebar does not reopen a closed viewer', async ({page}) => {

@@ -73,6 +73,8 @@ function expectSmoothReturn(
 }
 
 async function fixture(page: Page) {
+  // Exercise the supported pre-composition server path with controlled reads.
+  await page.route("**/api/view",route=>route.fulfill({status:404,json:{code:"404"}}));
   let reads = 0;
   let release = () => {};
   let gate = Promise.resolve();

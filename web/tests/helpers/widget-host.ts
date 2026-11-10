@@ -204,7 +204,7 @@ export async function openWidget(page: Page, options: HostOptions = {}) {
         }
         if (m.method === "tools/call") {
           const { name, arguments: args } = m.params;
-          if (name === "view_snapshot") {
+          if (["view_snapshot", "widget_pages"].includes(name)) {
             send({ id: m.id, result: { isError: true,
               structuredContent: { code: "invalid_arguments", message: "Unsupported UI operation" } } });
             return;

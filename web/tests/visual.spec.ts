@@ -33,6 +33,7 @@ test("workspace visual states: desktop, reference width, phone, light and dark",
       operations: fixtures.map(([title, status, due_date, notes]) => ({importance: "normal", estimated_minutes: 30, effort: "medium", 
         operation: "capture",
         title,
+        brief: "Complete this fictional preview task.",
         status,
         due_date,
         notes,
@@ -42,6 +43,7 @@ test("workspace visual states: desktop, reference width, phone, light and dark",
   });
   expect(seeded.ok()).toBe(true);
   const ids = (await seeded.json()).results.map((r: any) => r.entity_id);
+  await page.route("**/api/view", route => route.fulfill({status:404,json:{message:"Legacy composition fixture"}}));
   await page.route("**/api/tools/list_items", async (route) => {
     const args = route.request().postDataJSON();
     const response = await route.fetch({

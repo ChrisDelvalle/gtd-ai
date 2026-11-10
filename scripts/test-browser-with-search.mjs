@@ -65,7 +65,7 @@ try {
         "127.0.0.1::7700",
         "--env-file",
         envFile,
-        "getmeili/meilisearch:v1.54.3",
+        "getmeili/meilisearch:v1.54.3@sha256:e68913ab7d6f5b159529e472cfd362ce3c741fafd3c127961b2142abbe41b3c9",
       ],
       { timeout: 30000 },
     )

@@ -31,7 +31,9 @@ Capture coordinates account lifecycle changes and exports consistent application
 and identity snapshots, recording each capture time. Before saving the payload to
 Restic, it restores it into disposable databases and verifies table counts and
 identity/account mappings. Essential configuration and operator recovery material
-are included. Search indexes are derived and can be rebuilt.
+are included, along with an exact Docker image archive for the deployed release.
+Allow temporary disk space for that archive; Restic deduplicates repeated layers
+between snapshots. Search indexes are derived and can be rebuilt.
 
 The backup command does not prune snapshots. Keep an independent encrypted copy,
 verify it with `restic check --read-data`, and rehearse recovery. Do not delete the
@@ -53,8 +55,12 @@ python3 deploy/recover.py --repository /path/to/backup-repository \
   --state-dir /srv/gtd-restored
 ```
 
-Use the full snapshot ID printed by the backup command, not `latest`. Build the
-matching source first so the pinned application and identity images are available.
+Use the full snapshot ID printed by the backup command, not `latest`. Use the
+matching source checkout for the recovery command. It pulls the digest-pinned
+PostgreSQL verifier image, checks the paired release archive, and loads any missing
+application images by immutable ID. Rebuilding source alone is not a substitute
+for retaining those images. The target must have the same CPU architecture as the
+captured images; cross-architecture recovery is outside this procedure.
 Point a copy of the original installation configuration at the new state directory;
 keep its hostnames and identity settings unchanged. Failed recovery attempts stay
 private for inspection and cannot be started. Retry into another empty directory.

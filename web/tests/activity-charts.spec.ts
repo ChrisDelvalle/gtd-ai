@@ -928,6 +928,6 @@ test("malformed chart data stays a local recoverable failure",async({page})=>{
  await page.route("**/api/tools/activity_summary",route=>route.fulfill({json:{has_history:false}}));
  await page.goto("/");
  await expect(page.getByRole("button",{name:`Details: ${task.title}`,exact:true})).toBeVisible();
- await expect(page.getByText("Could not load chart data. Try again.",{exact:true})).toBeVisible();
+ await expect(page.locator(".chart-error")).toContainText("Could not load chart data. Try again.");
  await expect(page.getByRole("button",{name:"Retry",exact:true})).toBeVisible();
 });

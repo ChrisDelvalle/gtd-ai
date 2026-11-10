@@ -204,8 +204,7 @@ for (const width of [320, 390, 1280])
 test("compact navigation shares groups, then expanded sidebar keeps state", async ({
   page,
 }, info) => {
-  // Website-only releases preserve the separately published widget resource.
-  const publishedNames = names.map(name => name === "Next" ? "Next actions" : name);
+  const publishedNames = names;
   const { frame, changeMode } = await openWidget(page, {
     width: 390,
     long: false,
@@ -215,7 +214,9 @@ test("compact navigation shares groups, then expanded sidebar keeps state", asyn
     .click();
   const menu = frame.getByRole("menu", { name: "GTD views", exact: true });
   await expect(menu.getByRole("menuitemradio")).toHaveText([
-    ...publishedNames,
+    "Home",
+    "Charts",
+    ...publishedNames.slice(1),
     "Activity",
   ]);
   await menu

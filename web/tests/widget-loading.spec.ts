@@ -170,7 +170,7 @@ async function card(page: Page, html: string, options: Options) {
         setTimeout(() => send(result), (options.bundle ? options.profile.delay : 0) + encode(result) / options.profile.bytesPerSecond * 1000);
       }
       if (m.method !== "tools/call") return;
-      const { operation: name, arguments: args } = m.params.arguments;
+      const { name, arguments: args } = m.params;
       const view = args.query?.view;
       let data: any;
       let isError = failNext;

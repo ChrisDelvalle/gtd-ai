@@ -76,7 +76,9 @@ async function fixture(page: Page) {
       });
     const epoch = state.epoch;
     let json: any;
-    if (name === "home") {
+    if (name === "activity_summary") {
+      json = { days: [], has_history: false, timezone: "America/New_York", snapshot: "fixture-activity", from: "2025-10-05", through: "2026-10-03", today: "2026-10-03", totals: { activity: 0, completed: 0, categories: {} } };
+    } else if (name === "home") {
       const empty = {items:[],next_cursor:null};
       json={data:{next:{...empty,items:[task(epoch)]},waiting:empty,someday:empty,reviewTasks:empty,reviewProjects:{projects:[]},remaining:null}};
     } else if (name === "list_items")

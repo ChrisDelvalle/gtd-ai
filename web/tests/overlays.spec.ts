@@ -97,7 +97,7 @@ for (const mobile of [false, true]) {
         });
       const card = page.locator(".home-focus");
       await card.getByRole("button", { name: /^Details:/ }).click();
-      const notes = card.locator(".task-reading-notes");
+      const notes = card.locator(".task-markdown");
       const trigger = card.getByRole("button", {
         name: "More options: Prepare the workshop",
       });

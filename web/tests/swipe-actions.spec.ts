@@ -81,7 +81,7 @@ async function fixture(page: Page) {
     }
     throw new Error(`Unexpected tool ${name}`);
   });
-  await page.goto("/");
+  await page.goto("/tasks?archived=false&view=all");
   await page
     .getByRole("button", { name: "Open navigation", exact: true })
     .click();

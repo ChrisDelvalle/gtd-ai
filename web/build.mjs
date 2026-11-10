@@ -18,7 +18,11 @@ if (parsedSource.protocol !== "https:" || parsedSource.username || parsedSource.
   throw Error("GTD_SOURCE_URL must be a public HTTPS source URL");
 let sourceRevision = process.env.GTD_SOURCE_REVISION;
 if (!sourceRevision) {
-  try { sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {encoding:"utf8", stdio:["ignore","pipe","ignore"]}).trim(); }
+  try {
+    const options = {encoding:"utf8", stdio:["ignore","pipe","ignore"]};
+    sourceRevision = execFileSync("git", ["status", "--porcelain"], options).trim()
+      ? "development" : execFileSync("git", ["rev-parse", "HEAD"], options).trim();
+  }
   catch { sourceRevision = "development"; }
 }
 if (!/^(?:[a-f0-9]{40}|development)$/.test(sourceRevision)) throw Error("Invalid source revision");
