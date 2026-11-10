@@ -914,7 +914,9 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
     await expect(list).toBeVisible();
     await frame.locator(".widget-surface").screenshot({path: info.outputPath("priority-sheet.png"), animations: "disabled"});
     const beforeMore = calls.length;
-    await list.getByRole("button", {name:"Load more"}).click();
+    // Keep paging on touch too: exercise the swipe, page and close as one native
+    // touch sequence, without an intervening mouse-driven scroll to the footer.
+    await list.getByRole("button", {name:"Load more"}).tap();
     await expect(list.locator("li")).toHaveCount(21);
     expect(offset).toBe(20);
     expect(calls.slice(beforeMore)).toEqual(["priority_grid"]);
