@@ -37,6 +37,9 @@ than accumulating weights that imply more certainty than the data supports.
 - Resolve fields independently. Setting task importance does not suppress a
   missing-deadline fallback.
 - Inheritance changes derived priority, not stored task fields or audit history.
+- Project fallback is resolved before dependency inheritance. An explicit task
+  value can override its project fallback, but cannot shield its matrix
+  importance/urgency from stronger resolved downstream work.
 - Committed work is the main concern. Someday is uncommitted, not necessarily
   unimportant; do not invent urgency merely because it belongs to an active project.
 - An ambitious calendar must not give ordinary planned work an absolute advantage
@@ -273,7 +276,7 @@ they are not missing indexes, stale caches, or incidental tie-breakers.
 | Current absolute timing tiers | Strong respect for near commitments and the calendar | Low-stakes overdue work and ambitious blocks dominate importance |
 | Strict importance, then date | Critical always wins; very easy to explain | Critical but indefinite work can starve concrete, time-sensitive normal work |
 | Earliest deadline first | Excellent for auditing deadlines | Treats all consequences as equal; misses undated enabling work unless separately inherited |
-| Continuous age/urgency scoring | Smooth numerical movement | Unbounded lateness can dominate forever; harder to predict, cache, explain, and calibrate |
+| Continuous weighted urgency | Smooth numerical movement; bounded curves can avoid runaway lateness | Requires choosing a curve and more frequent evaluation; no demonstrated improvement over a few understandable bands. Unbounded age variants can dominate forever. |
 | User-adjustable weights | Supports many preferences | Asks users to maintain the algorithm; difficult to explain recommendations consistently |
 | Bounded urgency + importance | Fixes the stated counterexamples with a small number of rules | Still makes explicit value judgments at equal-score boundaries |
 
@@ -300,17 +303,21 @@ base score = resolved importance + max(constraint contribution, buffer contribut
 ```
 
 Work blocks and occurrence dates **do not add score** in the recommended
-candidate. Current planned work wins otherwise comparable ties. This is the
-smallest scheduling influence that still respects intent without making an
-extra block a way to manufacture priority.
+candidate. Current planned work wins otherwise comparable ties. This is a
+deliberately small scheduling influence; its adequacy remains a scenario-review
+question, not an established result.
 
 Order within the eligible workflow group:
 
 1. Higher base score.
 2. Stronger actual constraint contribution, before a buffer-only contribution.
 3. Higher resolved importance.
-4. Earlier relevant constraint/target within a boosted band. A distant deadline
-   with zero boost does not beat current planned work merely by existing.
+4. Earlier instant from the source that supplies the urgency contribution. When
+   an actual constraint supplies or ties the winning contribution, use the
+   earliest qualifying actual constraint, not an older buffer target. Only use
+   the buffer target here when it supplies a strictly greater contribution.
+   A distant deadline with zero boost does not beat current planned work merely
+   by existing.
 5. Current work block before otherwise equivalent unscheduled work.
 6. Earlier remaining timing, taking the earliest of the relevant selected
    plan/occurrence and distant constraint dates, with absent values last.
@@ -350,11 +357,16 @@ an hour would lose to Critical undated. A maximum of 4 would let Low overdue bea
 Critical undated outright. A maximum of 3 is the recommended compromise, not an
 empirically proven optimum.
 
-A small analytical comparison checked the eight non-buffer pairs above and
-monotonicity across 56 combinations of importance, constraint band, and current
-block presence. It confirms the arithmetic of the candidate, **not** the
-production implementation or real-world recommendation quality. Full scenario
-fixtures are required during implementation.
+Analytical checks covered the eight non-buffer comparisons above and the score
+prefix across 168 combinations of importance, constraint band, buffer band, and
+current block presence, with 466 monotonicity assertions. They confirm arithmetic,
+**not** the full comparator, production implementation, date resolver, or
+real-world recommendation quality. Full scenario fixtures are still required.
+
+In particular, a Normal task due in one hour and another Normal task overdue
+since yesterday must tie-break on those actual constraints. Giving the first
+task a buffer target a month ago must not let it win that tie through its buffer
+instead.
 
 ### Deliberate limitations
 
@@ -364,12 +376,29 @@ fixtures are required during implementation.
   correcting importance is the remedy; there is no invisible aging mechanism.
 - An impossible set of deadlines remains impossible. The algorithm does not
   allocate capacity, reschedule tasks, or guarantee feasibility.
+- A project deadline is not a computed latest-start date for its prerequisites.
+  Three sequential day-long tasks can require starting well before any of them
+  enters the 48-hour band. Use explicit Start by where that commitment is known;
+  automatic critical-path scheduling is outside this proposal. Deadline
+  inheritance must not be advertised as solving that planning problem.
 - Effort and duration remain explicit filters, not a permanent quick-task bias.
   A useful default should not continually postpone demanding work.
 - A genuine appointment with consequences should carry an appropriate deadline
   or Start by, rather than rely on an ordinary work block as a hard commitment.
 - Existing ranked order will change. This requires an intentional release note,
   updated help/agent guidance, and a measured comparison with the old policy.
+
+Tie-only scheduling has a real cost: with ten Normal tasks due within seven
+days, an otherwise undated Normal task blocked out for this morning ranks behind
+all ten. Showing that task in the matrix's Now column does not fix its low list
+position. The conservative rule remains the recommendation, but this is a
+specific scenario to review before approving the ranking policy. Do not call
+the rule optimal because it fixes the opposite problem of overpowered blocks.
+
+The discrete bands also produce intentional jumps. A Normal timed commitment
+can overtake Critical undated work as it crosses the two-hour boundary. Verify
+the boundary precisely and refresh coherently; do not add undocumented smoothing
+or hysteresis that makes identical snapshots disagree.
 
 ## 7. Dependencies and consistency between the matrix and list
 
@@ -378,6 +407,36 @@ undated prerequisite can then inherit the recommendation of a task whose missing
 deadline comes from a project, including across project boundaries. The displayed
 explanation must retain the full reason: prerequisite → dependent → project
 deadline, not falsely claim the prerequisite belongs to that project.
+
+### Escalation contract
+
+Let `base_importance` and `base_urgency` be each task's values after resolving
+eligible project fallback and its own timing. Let `dependents(t)` be the open
+tasks directly blocked by `t`. Traverse the acyclic graph with dependents first:
+
+```text
+matrix_importance(t) = max(base_importance(t), matrix_importance(dependents(t)))
+matrix_urgency(t)    = max(base_urgency(t),    matrix_urgency(dependents(t)))
+```
+
+An empty set of dependents leaves the base value unchanged. Use the eligible
+open-path rules below; a completed or excluded intermediary does not transmit
+live influence. These are maxima of **already resolved and propagated** values,
+not a lookup of the dependent's raw `importance` or `due_date`. The result is
+transitive and independent of display filters.
+
+For example, committed Normal A due next month blocks committed Critical B.
+B has no task deadline, but its Active project is due tomorrow. A is displayed
+as Critical and within 48 hours. A's explicit later deadline does not veto B's
+urgency; it only vetoes a fallback from A's own project. For a committed chain
+where A blocks B which blocks C, the same rule carries C's resolved project
+deadline and importance through B to A.
+
+Project importance, if introduced, participates before this propagation only
+where the task explicitly uses it. Project review dates and other non-urgency
+fields must not become urgency merely by passing through a dependency.
+
+### Ranking is not independent-axis recombination
 
 Preserve the two existing dependency contracts initially:
 
@@ -398,6 +457,15 @@ Keeping this exception is preferable to quietly manufacturing emergency work or
 discarding the earlier requirement that each axis show the maximum downstream
 stakes. If exact one-to-one grid/rank equivalence is required, review that
 requirement explicitly: using one donor for both axes would be a product change.
+
+For ranking, the equivalent rule is the best of the task's base recommendation
+and each eligible committed dependent's **already inherited whole**
+recommendation. A dependent's project fallback therefore does escalate its
+prerequisites, transitively, when that recommendation is stronger. It does not
+merge a high-importance donor with a different high-urgency donor. This is an
+explicit decision for review, not a claim that both presentations already have
+identical inheritance semantics. If the requirement is independent maxima in
+ranking too, the proposal must change here before implementation.
 
 For equal urgency values, prefer stronger evidence (constraint before
 buffer/plan), then the earlier relevant moment. Prefer the task itself when that
@@ -512,7 +580,12 @@ reuse a non-default cell sort without showing its label.
 All sorts operate over the full eligible set **before pagination**. Do not sort
 only the loaded page or re-sort preloaded first-page previews and imply they are
 globally correct. Stable ties use creation sequence and ID. Changing sort resets
-the continuation, retains membership filters, and obtains a coherent first page.
+the continuation and retains membership filters. In a matrix cell, the new order
+uses the **displayed grid's existing revision and evaluation time**; it must not
+silently replace the membership with a new live snapshot. Ordinary task-list
+queries can start a fresh snapshot because they have no separate grid count to
+honor. A cell's grid and list advance together only during an explicit/coherent
+background refresh, or recovery from an expired snapshot.
 Title sorts need one documented, deterministic normalization/collation shared
 by server and demo; browser locale must not change page membership. Existing
 stored-date search filters retain their current contract. If an effective-date
@@ -557,6 +630,11 @@ within the viewport and have accessible full names when labels are shortened.
 - A dependency source link opens its task; a project source opens its project.
   Returning restores cell, scroll, sort, and focus. Do not send a hidden model
   prompt to explain the reason.
+- The row's explanation describes its frozen snapshot. Opening an editable
+  source shows the current record, which may have changed since then. Preserve
+  the frozen source date/importance in the row, and refresh coherently on return;
+  do not retrofit today's project value into yesterday's explanation. Identify
+  indirect inheritance without pretending the ultimate source is a direct edge.
 - Keep the website's sheet anchored beneath the grid labels on desktop and
   phone. Keep the widget's bottom-sheet presentation. Preserve backdrop fade,
   open/close motion, reduced-motion behavior, and background scroll locking.
@@ -580,8 +658,12 @@ Do not keep an updated count paired with old membership.
 A sort/filter change is immediate user intent: acknowledge the selected control
 immediately. If its result is not cached, keep the old list visible with a small
 local pending state; do not present that list as already sorted/filtered under
-the new rule. Commit the new label/result state together, or visibly distinguish
-pending selection. On failure keep the last successful view and offer Retry.
+the new rule. Keep the trigger's applied label until the result arrives, mark it
+busy, and announce the requested change accessibly (for example, “Sorting by
+deadline”). If the menu remains open, mark that choice pending. Commit the new
+label/result together. Superseding a pending selection discards its late response.
+On failure keep the applied choice and last successful view, with Retry for the
+requested choice.
 
 ## 11. Query, caching, and compatibility design
 
@@ -593,16 +675,24 @@ the map for Home, lists, exact reads, matrix counts, cell previews, and details.
 No per-row project lookup and no writes during reads.
 
 The optimized exact-task read currently loads dependency closure but not parent
-projects. It must load the projects of every relevant task in that closure, not
-just the requested task, and agree with the full snapshot path. Historical
-snapshots need historical project versions, not current project dates. Source
-records and all explanation links remain account-bound and authorized.
+projects or the series timezone map. It must load the projects and referenced
+series timezone metadata of every relevant task in that closure, not just the
+requested task. The proposed occurrence-date tie-break now needs that metadata
+even outside the matrix. Full and exact reads must agree in non-default zones.
+Historical snapshots need historical project/series versions, not current dates
+or zones. Source records and explanation links remain account-bound and authorized.
 
 Return a compact derived object with the effective deadline, importance source,
 constraint/plan kind, dependency sources, evaluation time, next boundary, and
 policy version. Keep raw fields unchanged. Agent reads get enough provenance to
 avoid copying inherited values back into tasks or mistaking plans for deadlines.
 Ordinary current task context remains complete; compact previews omit note bodies.
+
+Keep all resolved facts, not only the winning matrix timing source: ranking may
+still need a current work block when a project deadline controls the matrix.
+Compute the next boundary conservatively across relevant candidates, including
+non-winning work blocks and dependency sources. A second overlapping block can
+start and become the selected block before the current block ends.
 
 ### Counts and preloading
 
@@ -630,13 +720,33 @@ where page size differs. A child-version-only cache is insufficient after a
 project edit. A project rename can change source labels without changing order;
 it still invalidates the corresponding derived display data.
 
+Invalidating read caches alone is insufficient. The current
+[mutation controller](../../web/src/mutations.ts) can retain an equal-version
+record even when a new recommendation arrives; [detail preparation](../../web/src/task-preparation.ts)
+also matches by task ID/version. Separate authoritative record freshness from
+derived-view freshness. Retain version-checked bodies/drafts, but accept derived
+priority only for the owning view's account/revision/evaluation/policy token.
+The same account revision can have a new evaluation time after a timing boundary.
+Never bump task versions merely to force a display refresh, or let a global
+latest-record cache overwrite a frozen cell's evaluated explanation.
+
 ### Pagination and failure handling
 
-Count, preview, first page, continuation, and detail data use the same frozen
-snapshot and policy. New writes or a midnight boundary must not silently alter
-later pages of an existing cell. Refresh replaces the page set coherently.
-Changing a filter or sort starts a new query; a cursor from another query is
-rejected. Expired snapshots get the normal recoverable refresh path.
+Counts, preview rows, page membership/order, and derived explanations use the
+same frozen snapshot and policy. New writes or a midnight boundary must not
+silently alter later pages of an existing cell. Current editable task bodies use
+their normal version/conflict contract; they must not overwrite the frozen
+row's title/status, membership, or reason. Opening details is the transition to
+the current record; it is not permission for a global record cache to rewrite
+the underlying frozen list. After a write, refresh replaces the grid and page
+set coherently rather than removing one row under an unchanged count/cursor.
+
+Changing a cell sort or timing/task-group filter starts a new query **within the
+same grid snapshot**, with a fresh cursor bound to those parameters. A project
+filter can require a new summary, but counts and drilldowns must still switch
+together. Reject cursors from another query. If the snapshot expires, obtain a
+new summary and first page together; never recover only the list against current
+data while retaining the old count.
 
 An authentication/account failure clears account-owned caches. Other read
 failures retain the successful view. Discard late results from an earlier
@@ -655,6 +765,11 @@ legacy validators, recurrence templates, undo, import/export, old writers, and
 rollback explicitly. An old server that drops an unknown mode cannot be a safe
 rollback. Existing immutable receipts must replay unchanged; fresh reads can
 provide new derived explanations separately.
+
+Older servers may not understand the new effective-field sorts or timing query
+parameters. Negotiate support or use the established stale-client recovery
+flow. Do not silently substitute Recommended or raw task deadlines for an
+explicitly requested new sort: that would label the wrong result as successful.
 
 The website, both supported widget bridges, MCP contracts, SQLite fixture/import
 paths, PostgreSQL paths, and static demos must agree where the behavior is
@@ -677,6 +792,8 @@ implementation and includes cases where the proposal has a known limitation.
 | Someday aspiration in a project due tomorrow | No project deadline/importance fallback. Its own explicit date/importance remains meaningful. |
 | Inbox capture in a dated project | No inferred commitment before clarification. |
 | Normal explicit task in Critical project, if importance is added | Remains Normal. Only explicit Use project opts in. |
+| Explicit Unimportant task in Critical project | The zero-valued importance is still explicit, not missing; no project override. |
+| Use project with an Unimportant project and Normal retained fallback | Inherit Unimportant, not the fallback; zero is a valid value. |
 | Use project task loses its project or moves to Someday | Uses retained task importance; no rewrite. UI shows the dormant/fallback mode when inspected. |
 | Project deadline cleared or postponed | Children without overrides refresh together; explicit task dates do not change. |
 | Project deadline moved but task version unchanged | New reads, details, and warm lists reflect the new project revision; old frozen pages remain stable. |
@@ -695,6 +812,9 @@ implementation and includes cases where the proposal has a known limitation.
 | Large buffer target already passed | Can supply approaching boost, never fake a missed hard deadline. |
 | Project review tomorrow but no deadline | Review visibility only; task remains undated absent other timing. |
 | Blocker gets project urgency through a downstream task | Shows dependency and project provenance; no copied deadline field. |
+| A due next month blocks Critical B with inherited project deadline tomorrow | Matrix A becomes Critical/within 48 hours despite A's explicit deadline; the stronger whole recommendation also propagates. |
+| A blocks B blocks C, and C resolves project importance/deadline | Resolve C first, then propagate transitively through eligible B to A. Do not stop at raw B fields. |
+| Project date changes on a hidden downstream donor | Recompute all affected ancestors even when filtered out of the donor's project or status view. |
 | Critical undated donor plus Trivial overdue donor | Matrix shows both maxima; Recommended uses strongest whole donor, not a fabricated score of 9. |
 | Hidden Someday donor influences visible Next prerequisite | Preserve existing matrix behavior and show source; Next-only filtering does not claim ranking parity. |
 | Selected project has cross-project dependency | Hidden external-project donor still influences the selected task; all records must belong to the same account. |
@@ -703,10 +823,18 @@ implementation and includes cases where the proposal has a known limitation.
 | Deadlines filter selects a task whose Start by is more urgent | Keep coordinates, show Start by source; filter membership does not reinterpret urgency. |
 | Filter leaves zero tasks | Correct zero grid and one recoverable empty state; no unrelated fallback list. |
 | Cell has one, four, or hundreds of tasks | Same sheet behavior; Recommended before pagination; exact count matches all pages. |
-| Switch from Recommended to Deadline on page two | New first-page snapshot, unchanged membership, no mixed-order continuation. |
+| Switch from Recommended to Deadline on page two | New first-page order/cursor within the same grid snapshot; unchanged membership and count, no mixed-order continuation. |
+| Another client completes a task while a cell sort is pending | Sorted cell still matches its frozen count; a later refresh replaces grid and rows together. |
+| Cell snapshot expires during a sort/filter change | Recover grid and first page together; no current list under an old count. |
 | Deadline/importance sort with inherited project value | Row displays the value used; raw fields remain accessible and unchanged. |
 | Search then change sort | Same matches, explicit new global order; relevance restored only by user/default rules. |
 | Background refresh completes during edit/swipe | Keep draft/focus/scroll; defer movement, then replace coherently. |
+| Same-version task receives a new project/dependency explanation | Derived view state refreshes without losing the retained body/draft or changing the task version. |
+| Same revision crosses a timing boundary | New evaluation token refreshes derived facts even without a write. |
+| Exact recurring-task read in a non-default series timezone | Matches full-snapshot rank/placement, including occurrence-date tie-breaks. |
+| Immediate task has a very old buffer target | The actual immediate constraint, not that buffer, determines an otherwise equal timing tie. |
+| Overlapping block begins before selected block ends | Next-change time includes that start; selection updates if the new block should win. |
+| Sequential work cannot fit before the inherited project deadline | No false feasibility claim or invented latest-start dates; explicit Start by can represent known lead time. |
 | Multiple accounts reuse the same record/query IDs | No shared results, preference leakage, sources, or tokens. |
 | Incorrect legacy/unsupported timing | Do not fabricate a deadline. Apply existing validation/recovery behavior and make malformed retained data diagnosable. |
 | All tasks are Critical or many deadlines are impossible | Honest ordered view; no claim that the recommendation solves capacity or prioritization mistakes. |
