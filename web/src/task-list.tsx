@@ -1,3 +1,4 @@
+import { SortControl, defaultTaskSort } from "./sort-control";
 import {ViewScope, useViewState, useViewRef, useRestoredView} from "./view-state";
 import { TaskFilters } from "./task-filters";
 import { taskPreparation } from "./task-preparation";
@@ -25,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import {
+  today,
   type Api,
   type Args,
   type List,
@@ -129,6 +131,8 @@ export function TaskList({
   const paging = useRef(false);
   const [result, setResult] = useViewState<List | null>(cacheKey+":result", initial || null),
     [args, setArgs] = useViewState(cacheKey+":args", input);
+  const [plannedToday, setPlannedToday] = useViewState(cacheKey+":plannedToday", false);
+  const nonSearchSort = useViewRef<string | undefined>(cacheKey+":nonSearchSort", input.sort as string | undefined);
   const scrollAnchor = useTaskScrollAnchor();
   const preparation = useMemo(
     () => api.taskPreparation ? taskPreparation(api) : undefined,
@@ -161,7 +165,7 @@ export function TaskList({
     restoreSearchFocus.current = true;
     setSearch(false);
     setQuery("");
-    if (args.query) change({ ...args, query: undefined });
+    if (args.query) change({ ...args, query: undefined, sort: nonSearchSort.current });
   }
   const readError = useRef<HTMLDivElement>(null);
   const [recover, setRecover] = useState(false);
@@ -385,10 +389,8 @@ export function TaskList({
   }
   function change(next: Args) {
     const requested = { ...next, cursor: undefined, offset: 0 };
-    if (environment.embedded && JSON.stringify(requested) !== argsKey) {
-      generation.current++;
-      setResult(null);
-    }
+    if (!next.query) nonSearchSort.current = next.sort as string | undefined;
+    generation.current++;
     setVisible(compact ? 5 : 20);
     pages.current = [];
     setPreviewPage(0);
@@ -399,6 +401,18 @@ export function TaskList({
       appNavigation.updateUrl?.({page:"Tasks", scope:scopeOf(next), input:next});
     }
   }
+  useEffect(() => {
+    if (!plannedToday) return;
+    const update = () => {
+      const current = latestArgs.current, day = today();
+      if (current.planned_from !== day || current.planned_through !== day)
+        change({ ...current, planned_from: day, planned_through: day });
+    };
+    update();
+    const timer = setInterval(update, 30_000);
+    document.addEventListener("visibilitychange", update);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", update); };
+  }, [plannedToday]);
   function selectScope(scope: string) {
     const {
       status: _,
@@ -651,7 +665,9 @@ export function TaskList({
       className="search-line card-search"
       onSubmit={(e) => {
         e.preventDefault();
-        change({ ...args, query: query || undefined });
+        if (query && !args.query) nonSearchSort.current = args.sort as string | undefined;
+        change({ ...args, query: query || undefined,
+          sort: !query ? nonSearchSort.current : args.query ? args.sort : "relevance" });
       }}
     >
       <IconButton label="Search" type="submit">
@@ -687,6 +703,11 @@ export function TaskList({
       </IconButton>
     </form>
   );
+  const appliedSort = result?.sort || defaultTaskSort(args);
+  const requestedSort = defaultTaskSort(args);
+  const sortControl = <SortControl value={appliedSort} select={(sort) => change({ ...args, sort })}
+    options={[...(args.query ? ["relevance"] : []), ...(args.review_on ? ["review"] : []), "action", "effective_due", "importance", "updated", "created", "created_desc"]}
+    pending={appliedSort !== requestedSort ? requestedSort : undefined} />;
   const utilities = (
     <>
       <UndoButton />
@@ -745,6 +766,7 @@ export function TaskList({
           <>
             <div className="page-actions">
               {compact && (navigation || scopeSelector)}
+              {(compact || bare) && sortControl}
               {!previewPaging && pagination}
             </div>
             {compact && <div className="view-actions">{utilities}</div>}
@@ -802,6 +824,7 @@ export function TaskList({
           </div>
           <div className="view-actions">
             {toolbarActions}
+            {sortControl}
             <UndoButton />
             {error && (
               <IconButton label="View connection problem" onClick={revealError}>
@@ -910,6 +933,8 @@ export function TaskList({
             args={args}
             scope={scope}
             filtering={filtering}
+            plannedToday={plannedToday}
+            setPlannedToday={setPlannedToday}
             change={change}
           />
         </FloatingPanel>

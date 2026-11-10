@@ -263,11 +263,9 @@ fn timing_resolved(
             && let Ok(at) = target.bound(true)
         {
             let urgency = Urgency::upcoming(at, now);
-            if urgency >= Urgency::Within7Days {
-                if urgency > result.urgency {
-                    result.urgency = urgency;
-                    result.evidence = (1, at.timestamp_millis());
-                }
+            if urgency >= Urgency::Within7Days && urgency > result.urgency {
+                result.urgency = urgency;
+                result.evidence = (1, at.timestamp_millis());
             }
             result.approaching(at, now, false);
         }
@@ -595,11 +593,9 @@ impl<'a> Grid<'a> {
                              "work_block":timing.work_block,
                              "timing_flags":self.tasks[task.id.as_str()].flags,
                              "effective_deadline":timing.deadline,"deadline_project":timing.project,
+                             "importance_from":placement.importance_from.map(source),
                              "priority_from":priority_from.map(source)});
-        if let Some(id) = placement
-            .urgency_from
-            .filter(|id| Some(*id) != priority_from)
-        {
+        if let Some(id) = placement.urgency_from {
             row["urgency_from"] = source(id);
         }
         if let Some(scheduled) = &timing.scheduled {
@@ -635,12 +631,16 @@ pub(crate) fn outputs() -> [Value; 2] {
         "work_block":{"anyOf":[{"$ref":"#/$defs/Moment"},{"type":"null"}]},
         "scheduled":{"$ref":"#/$defs/Moment"},
         "priority_from":{"anyOf":[source,{"type":"null"}]},
-        "urgency_from":source
+        "urgency_from":source,"importance_from":{"anyOf":[source,{"type":"null"}]},
+        "timing_flags":{"type":"integer","minimum":0,"maximum":7},
+        "effective_deadline":{"anyOf":[{"$ref":"#/$defs/Moment"},{"type":"null"}]},
+        "deadline_project":{"anyOf":[source,{"type":"null"}]}
     }});
     [
         json!({"type":"object","required":["kind","counts","snapshot","evaluated_at","next_change_at"],"properties":{
             "kind":{"const":SUMMARY},"counts":{"type":"array","minItems":7,"maxItems":7,"items":{"type":"array","minItems":7,"maxItems":7,"items":counts}},
-            "snapshot":{"type":"string"},"evaluated_at":{"type":"string"},"next_change_at":{"type":["string","null"]},
+            "timing_counts":{"type":"array","minItems":7,"maxItems":7,"items":{"type":"array","minItems":7,"maxItems":7,"items":{"type":"array","minItems":8,"maxItems":8,"items":counts}}},
+            "policy":{"type":"string"},"snapshot":{"type":"string"},"evaluated_at":{"type":"string"},"next_change_at":{"type":["string","null"]},
             "previews":{"type":"array","minItems":49,"maxItems":49,"items":{"type":"array","items":row}}
         }}),
         json!({"type":"object","required":["kind","items","next_cursor"],"properties":{
@@ -944,7 +944,7 @@ mod tests {
             Importance::Normal,
             Urgency::Overdue,
             &due.id,
-            None,
+            Some(&due.id),
         );
     }
 }

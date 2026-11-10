@@ -1,3 +1,4 @@
+import { SortControl } from "./sort-control";
 import { BriefField } from "./brief-field";
 import { useViewState, useViewRef } from "./view-state";
 import { ImportanceField } from "./planning-fields";
@@ -88,6 +89,8 @@ export function ProjectBrowser({
       "projects:cursor",
       initial?.next_cursor || null,
     );
+  const [sort, setSort] = useViewState<string>("projects:sort", String(input.sort || (input.query ? "relevance" : input.review_on ? "review" : "due")));
+  const [appliedSort, setAppliedSort] = useState(sort);
   const [loaded, setLoaded] = useState(!!initial);
   const [project, setProject] = useState<Project | null>(() => initial?.projects.find((row) => row.id === selected) ?? null),
     [error, setError] = useState(""),
@@ -161,6 +164,8 @@ export function ProjectBrowser({
   useEffect(() => {
     if (appliedInput.current === inputKey) return;
     appliedInput.current = inputKey;
+    if (input.sort || input.query || input.review_on)
+      setSort(String(input.sort || (input.query ? "relevance" : "review")));
     setSelected(typeof input.project_id === "string" ? input.project_id : null);
     setScope(
       String(
@@ -189,7 +194,7 @@ export function ProjectBrowser({
             }
           : {}),
         ...(input.review_on ? { status: undefined } : {}),
-        detail: "summary",
+        detail: "summary", sort,
       };
   const filterKey = JSON.stringify(filter);
   const firstRead = useRef(true);
@@ -229,6 +234,7 @@ export function ProjectBrowser({
           if (r.projects[0]) controller.observe(r.projects);
         } else {
           setRows(r.projects);
+          setAppliedSort(sort);
           setCursor(r.next_cursor);
         }
         setLoaded(true);
@@ -450,6 +456,9 @@ export function ProjectBrowser({
           )}
         </div>
         <div className="view-actions">
+          {!selected && <SortControl labels={{due:"Deadline"}} value={appliedSort} select={setSort}
+            options={[...(input.query ? ["relevance"] : []), ...(input.review_on ? ["review"] : []), "due", "updated", "title"]}
+            pending={sort !== appliedSort ? sort : undefined} />}
           {toolbarActions}
           {embedded && (
             <IconButton

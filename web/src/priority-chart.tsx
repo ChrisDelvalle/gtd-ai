@@ -1,3 +1,4 @@
+import { SortControl } from "./sort-control";
 import { applicationNow } from "./application-clock";
 import {
   useEffect,
@@ -12,6 +13,7 @@ import {
 import { X } from "lucide-react";
 import {
   errorText,
+  ApiError,
   importanceLevels,
   type Importance,
   type Moment,
@@ -45,9 +47,16 @@ const scopeNames = {
   all: "All open",
 };
 type Scope = keyof typeof scopeNames;
+const timingNames = { all: "All timing", deadlines: "Deadlines", start_by: "Start by", planned: "Planned", undated: "Undated" };
+type Timing = keyof typeof timingNames;
+function matchesTiming(timing: Timing, flags: number, column: number) {
+  return timing === "all" || timing === "undated" ? timing === "all" || column === 0
+    : !!(flags & ({ deadlines: 1, start_by: 2, planned: 4 }[timing]));
+}
 type Counts = Record<Exclude<Scope, "committed" | "all">, number>;
 type Summary = {
   counts: Counts[][];
+  timing_counts?: Counts[][][];
   previews?: Row[][];
   snapshot: string;
   next_change_at: string | null;
@@ -56,19 +65,24 @@ type Cell = {
   importance: Importance;
   urgency: (typeof columns)[number]["id"];
   scope: Scope;
+  timing?: Timing;
 };
 type Row = {
   id: string;
   title: string;
   status: keyof Counts;
   work_block: Moment | null;
+  timing_flags?: number;
+  effective_deadline?: Moment;
+  deadline_project?: { id: string; title: string };
   scheduled?: Moment;
   priority_from: { id: string; title: string } | null;
   urgency_from?: { id: string; title: string };
+  importance_from?: { id: string; title: string } | null;
 };
 type Page = { items: Row[]; next_cursor: string | null };
 type Snapshot = { project: string; summary: Summary };
-type View = Snapshot & { list?: Page & { cell: Cell; offset?: number } };
+type View = Snapshot & { list?: Page & { cell: Cell; offset?: number; sort?: string } };
 type ProjectFilter = { id: string; title: string };
 const anyProject = { id: "", title: "Any project" };
 const allProjects = { id: "all", title: "All projects" };
@@ -96,7 +110,8 @@ function position(cell: Cell) {
 }
 function countIn(summary: Summary, cell: Cell) {
   const [row, column] = position(cell);
-  return countFor(summary.counts[row]?.[column], cell.scope);
+  if (!cell.timing || cell.timing === "all") return countFor(summary.counts[row]?.[column], cell.scope);
+  return (summary.timing_counts?.[row]?.[column] || []).reduce((n, counts, flags) => n + (matchesTiming(cell.timing!, flags, column) ? countFor(counts, cell.scope) : 0), 0);
 }
 function previewRows(summary: Summary, cell: Cell) {
   const [row, column] = position(cell);
@@ -127,16 +142,17 @@ function previewRows(summary: Summary, cell: Cell) {
     items.push(...rows.slice(0, PAGE_SIZE - items.length));
     if (items.length >= PAGE_SIZE || rows.length < counts[status]) break;
   }
-  return items;
+  return items.filter((row) => matchesTiming(cell.timing || "all", row.timing_flags || 0, column));
 }
-function preference(key?: string): { scope: Scope; project: ProjectFilter } {
-  const fallback = { scope: "next" as const, project: anyProject };
+function preference(key?: string): { scope: Scope; project: ProjectFilter; timing: Timing } {
+  const fallback = { scope: "next" as const, project: anyProject, timing: "all" as Timing };
   try {
     const saved = key && localStorage.getItem(key);
     if (!saved) return fallback;
-    const { scope, project } = JSON.parse(saved);
+    const { scope, project, timing } = JSON.parse(saved);
     return {
       scope: Object.hasOwn(scopeNames, scope) ? scope : fallback.scope,
+      timing: Object.hasOwn(timingNames, timing) ? timing : "all",
       project:
         typeof project?.id === "string" && typeof project?.title === "string"
           ? project
@@ -243,12 +259,13 @@ export function PriorityChart({
   const [filter, setFilter] = useViewState(`priority:${identity}:filter`, () =>
     preference(key),
   );
-  const { scope, project } = filter;
+  const { scope, project, timing } = filter;
+  const [sort, setSort] = useViewState<string>(`priority:${identity}:sort`, "action");
   const [saved, setSaved] = useViewState<View | null>(
     `priority:${identity}:view`,
     null,
   );
-  const [chosen, setChosen] = useViewState<Omit<Cell, "scope"> | null>(
+  const [chosen, setChosen] = useViewState<Omit<Cell, "scope" | "timing"> | null>(
     `priority:${identity}:cell`,
     null,
   );
@@ -268,15 +285,16 @@ export function PriorityChart({
   const view = saved?.project === project.id ? saved : null;
   const pending = incoming?.project === project.id ? incoming : null;
   const target = pending || view;
-  const selected = chosen && { ...chosen, scope };
+  const selected = chosen && { ...chosen, scope, timing };
   const list =
     view?.list &&
     selected &&
     cellKey(view.list.cell) === cellKey(selected) &&
-    view.list.cell.scope === scope
+    view.list.cell.scope === scope && (view.list.cell.timing || "all") === timing && (view.list.sort || "action") === sort
       ? view.list
       : undefined;
 
+  const displayedList = list || (view?.list && selected && cellKey(view.list.cell) === cellKey(selected) ? view.list : undefined);
   function changeFilter(update: Partial<typeof filter>) {
     const value = { ...filter, ...update };
     setFilter(value);
@@ -329,7 +347,7 @@ export function PriorityChart({
 
   useEffect(() => {
     if (!target || (!pending && (!chosen || list))) return;
-    const cell = chosen && { ...chosen, scope };
+    const cell = chosen && { ...chosen, scope, timing };
     setCellError("");
     if (!cell || countIn(target.summary, cell) === 0) {
       if (pending) {
@@ -339,14 +357,14 @@ export function PriorityChart({
       return;
     }
     const items =
-      (list?.items.length ?? 0) <= PAGE_SIZE
+      sort === "action" && (list?.items.length ?? 0) <= PAGE_SIZE
         ? previewRows(target.summary, cell)
         : [];
     if (items.length) {
       setSaved({
         ...target,
         list: {
-          cell,
+          cell, sort,
           items,
           next_cursor: null,
           offset:
@@ -362,7 +380,7 @@ export function PriorityChart({
     api
       .call<Page>("priority_grid", {
         ...(target.project ? { project: target.project } : {}),
-        cell,
+        cell: { ...cell, timing: cell.timing === "all" ? undefined : cell.timing }, ...(sort === "action" ? {} : {sort}),
         snapshot: target.summary.snapshot,
         ...(list && list.items.length > PAGE_SIZE
           ? { limit: Math.min(list.items.length, 100) }
@@ -373,17 +391,20 @@ export function PriorityChart({
         setSaved({
           project: target.project,
           summary: target.summary,
-          list: { ...page, cell },
+          list: { ...page, cell, sort },
         });
         if (pending) setIncoming(null);
       })
       .catch((error) => {
-        if (active) setCellError(errorText(error));
+        if (active) {
+          setCellError(errorText(error));
+          if (error instanceof ApiError && error.code === "reset_required" && !pending) setAttempt(n => n+1);
+        }
       });
     return () => {
       active = false;
     };
-  }, [api, target, pending, chosen, scope, list, setSaved, attempt]);
+  }, [api, target, pending, chosen, scope, timing, sort, list, setSaved, attempt]);
 
   useLayoutEffect(() => {
     const key = returnFocus.current;
@@ -433,7 +454,7 @@ export function PriorityChart({
     try {
       const page = await api.call<Page>("priority_grid", {
         ...(view.project ? { project: view.project } : {}),
-        cell: list.cell,
+        cell: { ...list.cell, timing: list.cell.timing === "all" ? undefined : list.cell.timing }, ...(list.sort && list.sort !== "action" ? {sort:list.sort} : {}),
         snapshot: view.summary.snapshot,
         ...(list.next_cursor
           ? { cursor: list.next_cursor }
@@ -445,7 +466,7 @@ export function PriorityChart({
               ...view,
               list: {
                 ...page,
-                cell: list.cell,
+                cell: list.cell, sort: list.sort,
                 items: [...list.items, ...page.items],
               },
             }
@@ -459,7 +480,7 @@ export function PriorityChart({
   }
 
   const count = (row: number, column: number) =>
-    countFor(view?.summary.counts[6 - row]?.[6 - column], scope);
+    view ? countIn(view.summary, { importance: importanceLevels[row], urgency: columns[column].id, scope, timing }) : 0;
   const occupied = importanceLevels.flatMap((_, row) =>
     columns.flatMap((_, column) =>
       count(row, column) ? [row * 7 + column] : [],
@@ -515,6 +536,8 @@ export function PriorityChart({
             select={(project) => changeFilter({ project })}
             revision={revision}
           />
+          <ChartSelector value={timing} select={(timing) => changeFilter({ timing })}
+            options={(view?.summary.timing_counts ? Object.keys(timingNames) : ["all"]) as Timing[]} labels={timingNames} label="Timing" prefix="Timing" />
         </div>
         {typeControl}
       </div>
@@ -562,11 +585,14 @@ export function PriorityChart({
               title={`${importanceLabel(selected.importance)} · ${columns.find(({ id }) => id === selected.urgency)!.label}`}
               scroll={listScroll}
               close={closeList}
+              controls={<SortControl value={view.list?.sort || "action"} select={setSort} pending={(view.list?.sort || "action") !== sort ? sort : undefined} />}
             >
-              {list ? (
+              {displayedList ? (
                 <>
                   <ul>
-                    {list.items.map((task) => (
+                    {displayedList.items.map((original) => {
+                      const task = { ...original, importance_from: original.importance_from === undefined ? original.priority_from : original.importance_from };
+                      return (
                       <li key={task.id}>
                         <button
                           className="priority-task"
@@ -584,22 +610,23 @@ export function PriorityChart({
                               Work block · {momentLabel(task.work_block)}
                             </span>
                           )}
+                          {task.effective_deadline && <span>Deadline · {momentLabel(task.effective_deadline)}</span>}
+                          {task.deadline_project && <button className="text-action" onClick={() => navigation.go({ page: "Projects", input: { project_id: task.deadline_project!.id } })}>Project: {task.deadline_project.title}</button>}
                           {task.scheduled && (
                             <span>Scheduled · {momentLabel(task.scheduled)}</span>
                           )}
-                          {task.priority_from && (
+                          {task.importance_from && (
                             <button
                               className="text-action"
                               data-priority-focus={`source-${task.id}`}
                               onClick={() =>
                                 open(
-                                  task.priority_from!.id,
+                                  task.importance_from!.id,
                                   `source-${task.id}`,
                                 )
                               }
                             >
-                              {task.urgency_from ? "Importance" : "Priority"} from{" "}
-                              {task.priority_from.title}
+                              Importance from {task.importance_from.title}
                             </button>
                           )}
                           {task.urgency_from && (
@@ -615,9 +642,9 @@ export function PriorityChart({
                           )}
                         </div>
                       </li>
-                    ))}
+                    ); })}
                   </ul>
-                  {(list.next_cursor || list.offset != null) && (
+                  {(list && (list.next_cursor || list.offset != null)) && (
                     <button
                       className="text-action"
                       onClick={() => void more()}
@@ -666,7 +693,9 @@ function PrioritySheet({
   scroll,
   close,
   children,
+  controls,
 }: {
+  controls?: ReactNode;
   id: string;
   title: string;
   scroll: { current: number };
@@ -747,6 +776,7 @@ function PrioritySheet({
         >
           <header className="priority-sheet-header">
             <h2 id={`${id}-title`}>{title}</h2>
+            {controls}
             <button
               type="button"
               className="priority-sheet-close"

@@ -104,6 +104,11 @@ export type Task = Planning & {
   unresolved_blocker_ids?: string[];
   recommendation?: {
     source_task_id?: string;
+    effective_deadline?: Moment | null;
+    deadline_project?: { id: string; title: string } | null;
+    project_fallback?: { deadline: Moment; source: { id: string; title: string } } | null;
+    policy?: string;
+    revision?: number;
     reason: string;
     evaluated_at: string;
     next_change_at?: string | null;
@@ -119,6 +124,7 @@ export type Task = Planning & {
   };
   pending_occurrence_count?: number;
   recurrence?: {
+    timezone?: string;
     segments: { from: string; rule: RepeatRule; template: RepeatTemplate }[];
     pauses: { from: string; through: string | null }[];
     ended_on: string | null;

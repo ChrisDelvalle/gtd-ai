@@ -4,6 +4,7 @@ import { DependencyFields } from "./dependencies";
 import {
   PlanningFields,
   planningDraft,
+  momentLabel,
   planningArgs,
   type PlanningDraft,
 } from "./planning-fields";
@@ -285,6 +286,8 @@ function DescriptionInspector({
               void save();
             }}
           >
+            {!isProject && !form.due_date && form.project_id === task.project_id && ["next", "blocked", "waiting"].includes(form.status) && task.recommendation?.project_fallback &&
+              <p className="field-hint">Project deadline: {momentLabel(task.recommendation.project_fallback.deadline)} · {task.recommendation.project_fallback.source.title}</p>}
             {compact ? (
               <>
                 <TaskContext task={task} api={api} />

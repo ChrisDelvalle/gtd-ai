@@ -1,3 +1,5 @@
+import { SortControl } from "./sort-control";
+import { useViewState } from "./view-state";
 import { applicationNow } from "./application-clock";
 import { Charts } from "./charts";
 import { taskPreparation } from "./task-preparation";
@@ -70,6 +72,7 @@ function HomeSection({
   toggle,
   onView,
   render,
+  sortControl,
 }: {
   name: Section;
   label: string;
@@ -79,6 +82,7 @@ function HomeSection({
   toggle: () => void;
   onView: () => void;
   render: (task: Task) => ReactNode;
+  sortControl?: ReactNode;
 }) {
   const { compact, embedded } = useEnvironment();
   const limit = compact ? (name === "next" ? 2 : 1) : name === "next" ? 5 : 3;
@@ -97,6 +101,7 @@ function HomeSection({
             <ChevronDown aria-hidden="true" />
           </button>
         </h2>
+        {sortControl}
         {(more || rows.length > limit) && (
           <button className="text-action" onClick={onView}>
             View all <ArrowRight />
@@ -300,6 +305,23 @@ export function Home({
     saves.intents,
     (task) => controller.project(task, saves),
   );
+  const [previewSort, setPreviewSort] = useViewState("home:next-sort", "action");
+  const [sortedNext, setSortedNext] = useState<{ sort: string; data: List }>();
+  useEffect(() => {
+    if (previewSort === "action") { setSortedNext(undefined); return; }
+    let active = true, timer: ReturnType<typeof setTimeout>;
+    api.call<List>("list_items", {status:"next", sort:previewSort, group_recurrences:true, limit:7})
+      .then(result => {
+        const commit = () => {
+          if (!active) return;
+          if (controller.snapshot().intents.size || interactionInProgress()) { timer=setTimeout(commit,150); return; }
+          anchor.remember(); controller.observe(result.items); setSortedNext({sort:previewSort,data:result});
+        };
+        commit();
+      }).catch(e => { if(active) setError(errorText(e)); });
+    return () => { active=false; clearTimeout(timer); };
+  }, [api, previewSort, revision, attempt, data]);
+  const previewRows = sortedNext ? sortedNext.data.items.map(effective).filter(t => t.id !== lead?.id) : next.slice(1);
   const taskRow = (
     task: Task,
     featured = false,
@@ -393,11 +415,12 @@ export function Home({
           <HomeSection
             name="next"
             label="Next"
-            rows={next.slice(1)}
-            more={!!data.next.next_cursor}
+            rows={previewRows}
+            more={!!(sortedNext?.data || data.next).next_cursor}
             open={!collapsed.next}
             toggle={() => toggle("next")}
-            onView={() => onView("next")}
+            onView={() => app.go({page:"Tasks",scope:"next",input:{status:"next",sort:sortedNext?.sort || "action"}})}
+            sortControl={<SortControl value={sortedNext?.sort || "action"} pending={previewSort !== (sortedNext?.sort || "action") ? previewSort : undefined} select={setPreviewSort} />}
             render={taskRow}
           />
           <HomeSection

@@ -15,6 +15,8 @@ tests = [
     "postgres::identity_tests::verified_http_identity_resolves_current_account_without_username_fallback",
     "postgres::website_tests::",
     "postgres::activity_tests::",
+    "postgres::priorities::tests::",
+    "postgres::widget_launch::tests::",
     "postgres::administration::tests::",
 ]
 for name in tests:

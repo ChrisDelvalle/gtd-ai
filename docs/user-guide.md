@@ -66,3 +66,37 @@ request ID using `show_gtd` with `view: "results"` and `from_request_ids`.
 Keep the same request ID and arguments when retrying an uncertain write. A stale
 version means the record changed; read the current record and reconcile before
 trying again. Undo is recorded in history and respects coupled recurrence changes.
+
+### Priority and ordering
+
+Recommended combines importance with a bounded boost for a deadline or outstanding
+Start by. A missed low-importance deadline does not automatically outrank critical
+work due tomorrow. Work blocks help break comparable ties rather than creating a
+higher tier. After timing and importance, started work wins a tie, then older
+tasks. A stable record identifier resolves the final tie.
+
+A Next, Blocked, or Waiting task without its own deadline uses the deadline of its
+active, unarchived project. Its own deadline always takes precedence, even if
+later. The inherited date is labeled **Project** and does not change the task.
+Inbox, Someday, completed, archived, and skipped tasks do not borrow project dates.
+Project importance is not inherited.
+
+Dependencies resolve these facts first. Recommended inherits the strongest whole
+recommendation through committed work. The matrix inherits importance and urgency
+independently through open dependencies, so its axes may come from different tasks.
+The linked source labels explain each contribution.
+
+Use the visible sort selector to choose Recommended, Deadline, Importance, Recently
+changed, Oldest first, or Newest first. Deadline includes the project fallback;
+the existing Task deadline filter uses only a task’s saved date. Sorting applies
+to all matches before pagination. Search defaults to Relevance, Review to Review
+date, and Done/Archive to Recently changed. The featured Home task always remains
+Recommended; its Next preview has its own order. Title sorts use Unicode lowercase
+and UTF-8 byte order, independent of browser locale.
+
+In Priorities, **All timing**, **Deadlines**, **Start by**, **Planned**, and
+**Undated** filter membership without moving tasks to different squares. These
+filters include dependency timing sources. Cell lists default to Recommended and
+retain the grid’s snapshot when sorted. **Planned today** filters unfinished tasks
+by their own work blocks, using the account’s calendar day. It rolls forward at
+midnight; manually selected date ranges remain fixed.

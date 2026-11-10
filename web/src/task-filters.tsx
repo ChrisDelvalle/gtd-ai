@@ -1,6 +1,6 @@
 import { useId } from "react";
-import { ChevronDown, X } from "lucide-react";
-import { type Args, statuses, effortLevels } from "./api";
+import { X } from "lucide-react";
+import { type Args, statuses, effortLevels, today } from "./api";
 
 function DateFilter({
   label,
@@ -52,12 +52,17 @@ export function TaskFilters({
   scope,
   filtering,
   change,
+  plannedToday,
+  setPlannedToday,
 }: {
   args: Args;
   scope: string;
   filtering: boolean;
   change: (args: Args) => void;
+  plannedToday: boolean;
+  setPlannedToday: (on: boolean) => void;
 }) {
+  const day = today();
   return (
     <>
       <div className="filter-heading">
@@ -66,7 +71,7 @@ export function TaskFilters({
           type="button"
           className="text-action"
           disabled={!filtering}
-          onClick={() =>
+          onClick={() => { setPlannedToday(false);
             change({
               ...args,
               due_from: undefined,
@@ -79,33 +84,13 @@ export function TaskFilters({
               planned_through: undefined,
               exclude_statuses: undefined,
               ...(scope === "all" ? { archived: false } : {}),
-            })
+            }); }
           }
         >
           Clear filters
         </button>
       </div>
       <div className="estimate-fields"><label>Time available<input aria-label="Time available in minutes" type="number" min="0" max="5256000" step="1" placeholder="Minutes" value={args.max_estimated_minutes as number ?? ""} onChange={e=>change({...args,max_estimated_minutes:e.target.value===""?undefined:Number(e.target.value)})}/></label><label>Maximum effort<select aria-label="Maximum effort" value={String(args.max_effort||"")} onChange={e=>change({...args,max_effort:e.target.value||undefined})}><option value="">Any</option>{effortLevels.map(v=><option key={v} value={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></label></div>
-      <label className="filter-sort">
-        Sort
-        <span className="select-control">
-          <select
-            aria-label="Sort tasks"
-            value={String(args.sort || "")}
-            onChange={(e) =>
-              change({ ...args, sort: e.target.value || undefined })
-            }
-          >
-            <option value="">Recommended</option>
-            <option value="action">Next actions first</option>
-            <option value="importance">Importance</option>
-            <option value="due">Due date</option>
-            <option value="updated">Recently changed</option>
-            <option value="created">Created</option>
-          </select>
-          <ChevronDown aria-hidden="true" />
-        </span>
-      </label>
       {scope === "all" && (
         <fieldset className="status-filters">
           <legend>Status</legend>
@@ -150,12 +135,16 @@ export function TaskFilters({
       )}
       {(
         [
-          ["due", "Due"],
+          ["due", "Task deadline"],
           ["planned", "Planned"],
         ] as const
       ).map(([prefix, title]) => (
         <fieldset className="filter-range" key={prefix}>
           <legend>{title}</legend>
+          {prefix === "planned" && !["done", "archive"].includes(scope) && <button type="button" className="text-action"
+            aria-pressed={plannedToday && args.planned_from === day && args.planned_through === day}
+            onClick={() => { setPlannedToday(true); change({ ...args, planned_from: day, planned_through: day,
+              archived: false, exclude_statuses: [...new Set([...(args.exclude_statuses as string[] || []), "done"])] }); }}>Planned today</button>}
           <div className="filter-range-fields">
             {(["from", "through"] as const).map((bound) => (
               <DateFilter
@@ -163,13 +152,14 @@ export function TaskFilters({
                 label={bound === "from" ? "From" : "Through"}
                 name={`${title} ${bound}`}
                 value={String(args[`${prefix}_${bound}`] || "")}
-                change={(value) =>
+                change={(value) => {
+                  setPlannedToday(false);
                   change({
                     ...args,
                     ...(prefix === "due" ? { undated: false } : {}),
                     [`${prefix}_${bound}`]: value || undefined,
-                  })
-                }
+                  });
+                }}
               />
             ))}
           </div>

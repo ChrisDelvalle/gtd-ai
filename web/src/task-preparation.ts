@@ -32,7 +32,7 @@ export function taskPreparation(api: Api) {
     ) {
       let cancelled = false;
       const job = {
-        key: `${task.id}:${task.version}`,
+        key: `${task.id}:${task.version}:${task.recommendation?.policy || ""}:${task.recommendation?.revision || ""}:${task.recommendation?.evaluated_at || ""}`,
         cancelled: false,
         start: () => {
           void api
@@ -49,7 +49,7 @@ export function taskPreparation(api: Api) {
                 record?.id === task.id &&
                 record.version === task.version
               )
-                accept(record);
+                accept({ ...record, recommendation: task.recommendation || record.recommendation });
             })
             .catch(() => {}) // A failed guess never replaces explicit error/retry UI.
             .finally(() => {

@@ -334,3 +334,31 @@ async fn day_pages_budget_the_nested_snapshot_and_keep_all_contributors() {
     }
     assert_eq!(seen.len(), 35);
 }
+
+#[tokio::test]
+async fn result_sort_uses_frozen_records_and_continues_with_canonical_default() {
+    let (_d, app) = fixture();
+    let z = call(&app, "capture_item", capture("Zulu", "inbox")).await;
+    call(&app, "capture_item", capture("Alpha", "inbox")).await;
+    let q = json!({"from_request_ids":["Zulu","Alpha"],"limit":1});
+    let initial = call(&app, "request_results", q.clone()).await;
+    let mut next = q.clone();
+    next["cursor"] = initial["next_cursor"].clone();
+    next["sort"] = json!("result_order");
+    assert_eq!(
+        call(&app, "request_results", next).await["records"][0]["title"],
+        "Zulu"
+    );
+    call(&app,"update_item",json!({"task_id":z["task"]["id"],"expected_version":1,"title":"Aardvark","reason":"Fixture","request_id":"rename"})).await;
+    let mut sorted = q;
+    sorted["sort"] = json!("title");
+    sorted["snapshot"] = initial["snapshot"].clone();
+    let first = call(&app, "request_results", sorted.clone()).await;
+    assert_eq!(first["records"][0]["title"], "Alpha");
+    sorted.as_object_mut().unwrap().remove("snapshot");
+    sorted["cursor"] = first["next_cursor"].clone();
+    assert_eq!(
+        call(&app, "request_results", sorted).await["records"][0]["title"],
+        "Zulu"
+    );
+}

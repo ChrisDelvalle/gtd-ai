@@ -13,6 +13,7 @@ export function ChartSelector<T extends string>({
   children,
   align = "start",
   anchorRef,
+  pending,
 }: {
   value: T;
   select: (value: T) => void;
@@ -24,6 +25,7 @@ export function ChartSelector<T extends string>({
   children?: ReactNode;
   align?: "start" | "end";
   anchorRef?: RefObject<HTMLButtonElement | null>;
+  pending?: T;
 }) {
   const [open, setOpen] = useState(false);
   const localAnchor = useRef<HTMLButtonElement>(null);
@@ -35,6 +37,8 @@ export function ChartSelector<T extends string>({
         type="button"
         className="chart-selector"
         aria-label={`${prefix}: ${triggerLabel}`}
+        aria-busy={!!pending || undefined}
+        aria-description={pending ? `Changing to ${labels[pending]}` : undefined}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
@@ -61,6 +65,7 @@ export function ChartSelector<T extends string>({
               key={option}
               role="menuitemradio"
               aria-checked={value === option}
+              aria-busy={pending === option || undefined}
               onClick={() => {
                 setOpen(false);
                 select(option);

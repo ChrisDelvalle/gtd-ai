@@ -784,7 +784,13 @@ impl Store {
         let exact = input.project_id.is_some();
         let key = query_key(&input)?;
         let filter = ListItems {
-            sort: input.sort,
+            sort: Some(input.sort.unwrap_or(if input.query.is_some() {
+                TaskSort::Relevance
+            } else if input.review_on.is_some() {
+                TaskSort::Review
+            } else {
+                TaskSort::Due
+            })),
             task_id: input.project_id,
             status: input.status.map(Into::into).or(
                 if input.view == Some(TaskView::Active)
@@ -1081,6 +1087,10 @@ mod read_equivalence {
                 json!({"view":"all","sort":"created"}),
                 json!({"view":"all","sort":"updated"}),
                 json!({"view":"all","sort":"due"}),
+                json!({"view":"all","sort":"effective_due"}),
+                json!({"view":"all","sort":"created_desc"}),
+                json!({"view":"all","sort":"title"}),
+                json!({"review_on":"2026-10-09","sort":"created_desc"}),
                 json!({"view":"all","exclude_statuses":["done","someday"]}),
             ] {
                 let input: ListItems = serde_json::from_value(value.clone()).unwrap();

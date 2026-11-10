@@ -1,3 +1,4 @@
+import { SortControl } from "./sort-control";
 import { useEffect, useRef, useState } from "react";
 import { type Args, type Task, errorText } from "./api";
 import { useAppNavigation, useEnvironment } from "./app-context";
@@ -12,6 +13,7 @@ export type RequestResults = {
   snapshot: string;
   app: "gtd";
   view: "results";
+  sort?: string;
 };
 export function Results({
   input,
@@ -37,10 +39,13 @@ export function Results({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [retry, setRetry] = useState(0);
+  const [sort, setSort] = useState("result_order");
   const limit = typeof input.limit === "number" ? input.limit : undefined;
-  const key = JSON.stringify([ids, limit]);
+  const key = JSON.stringify([ids, limit, sort]);
   const initial = useRef({ key, revision, value: input.initial_results });
   const generation = useRef(0);
+  const readRevision = useRef(revision);
+  const readIds = useRef(JSON.stringify(ids));
   const scope = api.identityScope?.();
   useEffect(() => {
     let alive = true;
@@ -63,7 +68,7 @@ export function Results({
     }
     setBusy(true);
     api
-      .call<RequestResults>("request_results", { from_request_ids: ids, limit })
+      .call<RequestResults>("request_results", { from_request_ids: ids, limit, sort, ...(revision === readRevision.current && readIds.current === JSON.stringify(ids) && data?.snapshot ? { snapshot: data.snapshot } : {}) })
       .then((r) => {
         const commit = () => {
           if (!alive) return;
@@ -72,6 +77,8 @@ export function Results({
             return;
           }
           controller.observe(r.records);
+          readRevision.current = revision;
+          readIds.current = JSON.stringify(ids);
           setData(r);
           setError("");
         };
@@ -98,6 +105,7 @@ export function Results({
         from_request_ids: ids,
         limit,
         cursor: data.next_cursor,
+        sort: data.sort || "result_order",
       });
       if (current !== generation.current) return;
       setData({ ...r, records: [...data.records, ...r.records] });
@@ -142,6 +150,8 @@ export function Results({
           {error} <button onClick={() => setRetry((n) => n + 1)}>Retry</button>
         </div>
       )}
+      <SortControl value={data?.sort || "result_order"} select={setSort} options={["result_order", "updated", "title"]}
+        pending={sort !== (data?.sort || "result_order") ? sort : undefined} />
       {!data && !error && <p role="status">Loading…</p>}
       {data?.records.map((t) =>
         t.deleted ? (

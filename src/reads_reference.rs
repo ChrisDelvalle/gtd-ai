@@ -55,12 +55,15 @@ pub(super) fn select_reference(
     // Choose the same first result with or without grouping, including explicit
     // deadline/status exceptions. Reuse the order to keep representatives consistent.
     let order = "CASE WHEN ?17='relevance' THEN search_position END,
-      CASE WHEN ?16 IS NOT NULL THEN json_extract(document,'$.review_date') END,
+      CASE WHEN ?17='review' THEN json_extract(document,'$.review_date') END,
       CASE WHEN ?17='action' THEN COALESCE(json_extract(document,'$.archived'),0) END,
       CASE WHEN ?17='action' THEN CASE json_extract(document,'$.status') WHEN 'next' THEN 0 WHEN 'active' THEN 0 WHEN 'inbox' THEN 1 WHEN 'waiting' THEN 2 WHEN 'blocked' THEN 3 WHEN 'someday' THEN 4 WHEN 'done' THEN 5 ELSE 6 END END,
       CASE WHEN ?17='action' AND ?2='task' THEN dependency_key END,
       CASE WHEN ?17='importance' THEN gtd_importance(document) END DESC,
       CASE WHEN ?17='due' OR (?17='action' AND ?2!='task') THEN gtd_due(document) END,
+      CASE WHEN ?17='effective_due' THEN dependency_due END,
+      CASE WHEN ?17='title' THEN gtd_title(document) END,
+      CASE WHEN ?17='created_desc' THEN created_seq END DESC,
       CASE WHEN ?17='updated' THEN seq END DESC, created_seq, entity_id";
     let pending = "json_extract(document,'$.occurrence') IS NOT NULL AND json_extract(document,'$.status')!='done' AND COALESCE(json_extract(document,'$.archived'),0)=0 AND COALESCE(json_extract(document,'$.occurrence.skipped'),0)=0";
     let timestamp = chrono::DateTime::parse_from_rfc3339(evaluated_at)
@@ -76,10 +79,10 @@ pub(super) fn select_reference(
     let rank_json = serde_json::to_string(
         &rankings
             .iter()
-            .map(|(id, r)| (id, json!({"key": r.key, "next": r.next_change_at})))
+            .map(|(id, r)| (id, json!({"key": r.key, "next": r.next_change_at, "due": graph.facts.get(id).map(|f| f.due_key())})))
             .collect::<std::collections::BTreeMap<_, _>>(),
     )?;
-    let sql = format!("{SOURCE}, dependency_rank AS (SELECT key dependency_id,json_extract(value,'$.key') dependency_key,json_extract(value,'$.next') dependency_next FROM json_each(?26)), search_rank AS MATERIALIZED (SELECT value ranked_id,CAST(key AS INTEGER) search_position FROM json_each(?9)), matched AS (SELECT records.*,search_rank.search_position,dependency_key,dependency_next FROM records LEFT JOIN search_rank ON search_rank.ranked_id=records.entity_id LEFT JOIN dependency_rank ON dependency_id=records.entity_id WHERE entity_type=?2
+    let sql = format!("{SOURCE}, dependency_rank AS (SELECT key dependency_id,json_extract(value,'$.key') dependency_key,json_extract(value,'$.next') dependency_next,json_extract(value,'$.due') dependency_due FROM json_each(?26)), search_rank AS MATERIALIZED (SELECT value ranked_id,CAST(key AS INTEGER) search_position FROM json_each(?9)), matched AS (SELECT records.*,search_rank.search_position,dependency_key,dependency_next,dependency_due FROM records LEFT JOIN search_rank ON search_rank.ranked_id=records.entity_id LEFT JOIN dependency_rank ON dependency_id=records.entity_id WHERE entity_type=?2
       AND (?3 IS NULL OR entity_id=?3) AND (?4 IS NULL OR entity_id IN (SELECT value FROM json_each(?4)))
       AND (?5 IS NULL OR json_extract(document,'$.status')=?5)
       AND (?6 IS NULL OR COALESCE(json_extract(document,'$.archived'),0)=?6)
@@ -170,6 +173,7 @@ pub(super) fn select_reference(
         }
         if let Some(r) = task.recommendation.as_mut() {
             r.next_change_at = next_change;
+            r.revision = Some(h);
         }
         Ok(task)
     })

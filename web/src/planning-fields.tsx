@@ -1,3 +1,4 @@
+import { useAppNavigation } from "./app-context";
 import { applicationNow } from "./application-clock";
 import { useEffect, useId, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
@@ -522,6 +523,7 @@ export function PlanningFields({
   );
 }
 export function PlanningContext({ task }: { task: Task }) {
+  const navigation = useAppNavigation();
   return (
     <div className="planning-context">
       {task.importance && (
@@ -540,6 +542,11 @@ export function PlanningContext({ task }: { task: Task }) {
           )}
         </MetadataRow>
       )}
+      {!task.due_date && task.recommendation?.effective_deadline && <MetadataRow label="Deadline" kind="deadline">
+        <MomentValue value={task.recommendation.effective_deadline} />
+        {task.recommendation.deadline_project && <button className="text-action" onClick={() => navigation.go({page:"Projects", input:{project_id:task.recommendation!.deadline_project!.id}})}>
+          Project: {task.recommendation.deadline_project.title}</button>}
+      </MetadataRow>}
       {task.start_by && (
         <MetadataRow label="Start by">
           <MomentValue value={task.start_by} />

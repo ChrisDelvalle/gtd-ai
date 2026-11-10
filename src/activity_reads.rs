@@ -157,7 +157,7 @@ impl Store {
     }
     pub fn request_results(&self, q: ResultsQuery) -> Result<Value> {
         let ids = requests(&self.connection, &q.from_request_ids)?;
-        let key = json!({"requests":q.from_request_ids,"sort":q.sort});
+        let key = json!({"requests":q.from_request_ids,"sort":q.sort.unwrap_or(crate::activity::ResultsSort::ResultOrder)});
         let base = q
             .snapshot
             .as_deref()
@@ -194,9 +194,9 @@ impl Store {
             return Err(StoreError::Invalid("limit must be 1–100".into()));
         }
         let order = if q.sort == Some(crate::activity::ResultsSort::Title) {
-            "gtd_title(document),entity_id"
+            "gtd_title(document),(SELECT MIN(r.seq) FROM revisions r WHERE r.entity_id=revisions.entity_id),entity_id"
         } else {
-            "seq DESC,entity_id"
+            "seq DESC,(SELECT MIN(r.seq) FROM revisions r WHERE r.entity_id=revisions.entity_id),entity_id"
         };
         let mut stmt=self.connection.prepare(&format!("SELECT document FROM revisions WHERE entity_id IN (SELECT value FROM json_each(?1)) AND seq IN (SELECT MAX(seq) FROM revisions WHERE seq<=?2 GROUP BY entity_id) ORDER BY {order} LIMIT ?3 OFFSET ?4"))?;
         let rows = stmt

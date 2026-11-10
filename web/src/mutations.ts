@@ -101,12 +101,19 @@ export class MutationController {
     return intent?.preview &&
       (intent.phase !== "error" || intent.error?.uncertain)
       ? intent.preview
-      : current;
+      : current.version === task.version && task.recommendation
+        ? { ...current, recommendation: task.recommendation }
+        : current;
   }
   observe(tasks: Task[]) {
     let changed = false;
     for (const task of tasks) {
       const previous = this.state.current.get(task.id);
+      if (previous && task.version === previous.version && task.recommendation &&
+          (!previous.recommendation || (task.recommendation.revision ?? 0) >= (previous.recommendation.revision ?? 0) && task.recommendation.evaluated_at >= previous.recommendation.evaluated_at)) {
+        this.state.current.set(task.id, { ...previous, recommendation: task.recommendation });
+        changed = true;
+      }
       if (
         !previous ||
         task.version > previous.version ||
@@ -114,7 +121,11 @@ export class MutationController {
           (previous.notes === undefined && task.notes !== undefined ||
             !!task.widget_preview && task.widget_preview !== previous.widget_preview))
       ) {
-        this.state.current.set(task.id, task);
+        // A late full-body read can enrich the same stored version without
+        // rolling derived project/dependency facts back to an older snapshot.
+        const current = this.state.current.get(task.id);
+        this.state.current.set(task.id, previous?.version === task.version && current?.recommendation
+          ? { ...task, recommendation: current.recommendation } : task);
         changed = true;
       }
     }

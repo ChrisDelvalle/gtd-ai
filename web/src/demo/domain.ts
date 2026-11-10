@@ -74,72 +74,77 @@ export function blocks(t: Task) {
       : bound({ ...b.start, time: null, utc_offset_minutes: null }, true),
   }));
 }
-export function constraints(t: Task): [string, Moment][] {
+export function facts(t: Task, project?: Task) {
+  const eligible = !!project && live(t) && ["next", "blocked", "waiting"].includes(t.status)
+    && project?.id === t.project_id && project.entity_type === "project"
+    && project.status === "active" && !project.archived && !project.deleted;
+  const own = t.due_date ? { date: t.due_date, timezone: ZONE, ...t.deadline_time } : undefined;
+  const fallback = eligible && project.due_date ? {
+    deadline: { date: project.due_date, timezone: ZONE, ...project.deadline_time },
+    source: { id: project.id, title: project.title },
+  } : undefined;
+  return { deadline: own || fallback?.deadline, project: own ? undefined : fallback?.source, fallback };
+}
+export function constraints(t: Task, f = facts(t)): [string, Moment][] {
   return [
-    ...(t.due_date
-      ? [
-          [
-            "Deadline",
-            { date: t.due_date, timezone: ZONE, ...t.deadline_time },
-          ] as [string, Moment],
-        ]
-      : []),
-    ...(!t.started && t.start_by
-      ? [["Start by", t.start_by] as [string, Moment]]
-      : []),
+    ...(f.deadline ? [[f.project ? "Project deadline" : "Deadline", f.deadline] as [string, Moment]] : []),
+    ...(!t.started && t.start_by ? [["Start by", t.start_by] as [string, Moment]] : []),
   ];
 }
 export function buffer(t: Task): number | undefined {
   if (!t.due_date || !t.safety_buffer) return;
   const m: Moment = { date: t.due_date, timezone: ZONE, ...t.deadline_time };
   const b = t.safety_buffer;
-  if (b.unit === "days")
-    return bound({ ...m, date: shift(m.date, -b.value) }, true);
+  if (b.unit === "days") return bound({ ...m, date: shift(m.date, -b.value) }, true);
   return bound(m, true) - b.value * (b.unit === "hours" ? HOUR : 60000);
 }
 const now = Date.parse(NOW);
-export function rank(t: Task) {
-  const cs = constraints(t)
-    .map(([label, m]) => ({ label, m, end: bound(m, true) }))
-    .sort((a, b) => a.end - b.end);
-  const earliest = cs[0];
-  const immediate = cs.some(
-    (c) =>
-      c.end <= now ||
-      (c.m.time && c.end <= now + 2 * HOUR) ||
-      (!c.m.time && bound(c.m) <= now),
-  );
-  const block = blocks(t)
-    .filter((b) => b.start <= now && b.end > now)
-    .sort((a, b) => a.end - b.end)[0];
-  const target = buffer(t);
-  const plan =
-    target !== undefined && (!earliest || target < earliest.end)
-      ? { end: target, label: "Buffer target" }
-      : earliest;
-  const boost = plan
-    ? plan.end <= now + 48 * HOUR
-      ? 2
-      : plan.end <= now + 7 * DAY
-        ? 1
-        : 0
-    : 0;
-  const group = immediate ? 0 : block ? 1 : 2;
-  const imp = importance(t);
-  const value = imp + (group === 2 ? boost : 0);
-  const at = group === 1 ? block?.end : group === 2 ? plan?.end : earliest?.end;
+function selectedPlan(t: Task, seriesZone = ZONE) {
+  const choices = blocks(t).sort((a, b) => {
+    const key = (v: typeof a) => v.end <= now ? [2, now - v.end, 0]
+      : v.start <= now ? [0, v.end - now, 0] : [1, v.start - now, v.end];
+    const x = key(a), y = key(b);
+    return x[0]-y[0] || x[1]-y[1] || x[2]-y[2] || compareText(a.block.id, b.block.id);
+  });
+  const b = choices[0];
+  if (b) return { moment: b.block.start, start: b.start, end: b.end, current: b.start <= now && now < b.end, occurrence: false };
+  if (!t.occurrence) return;
+  const moment: Moment = { date: t.occurrence.scheduled_date, timezone: seriesZone };
+  return { moment, start: bound(moment), end: bound(moment, true), current: false, occurrence: true };
+}
+// UTF-8 byte order, matching Rust, independent of browser locale.
+const encoder = new TextEncoder();
+export function compareText(a: string, b: string) {
+  const x = encoder.encode(a), y = encoder.encode(b);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] - y[i];
+  return x.length - y.length;
+}
+const approaching = (at: number) => at <= now + 48*HOUR ? 2 : at <= now + 7*DAY ? 1 : 0;
+const timeKey = (at?: number) => at === undefined ? "1" + "0".repeat(20)
+  : "0" + (BigInt(at) + (1n << 63n)).toString().padStart(20, "0");
+export function rank(t: Task, f = facts(t), seriesZone = ZONE) {
+  const cs = constraints(t, f).map(([label, m]) => {
+    const end = bound(m, true), immediate = m.time ? end - 2*HOUR : bound(m);
+    return { label, end, h: now >= immediate ? 3 : approaching(end) };
+  });
+  const h = Math.max(0, ...cs.map(c => c.h)), target = buffer(t), b = target === undefined ? 0 : approaching(target);
+  const winning = cs.filter(c => c.h === h).sort((a,b) => a.end-b.end)[0];
+  const promoted = Math.max(h,b) === 0 ? undefined : h >= b ? winning?.end : target;
+  const extra = [...new Set(cs.filter(c => c.h > 0 && c.end !== promoted).map(c => c.end))].sort((a,b) => a-b);
+  const plan = selectedPlan(t, seriesZone);
+  const tie = plan ? plan.occurrence || plan.start > now ? plan.start : plan.end : undefined;
+  const remaining = [...new Set([...cs.filter(c => !c.h).map(c => c.end), ...(tie === undefined ? [] : [tie])])]
+    .filter(at => at !== promoted && !extra.includes(at)).sort((a,b) => a-b);
   return {
-    key: `${group}:${String(8 - value).padStart(2, "0")}:${String(6 - imp).padStart(2, "0")}:${String(at === undefined ? 999999999999999 : at + 100000000000000).padStart(15, "0")}`,
-    reason: immediate
-      ? `${earliest.label} ${earliest.end <= now ? "overdue" : "due soon"}`
-      : block
-        ? "Planned now"
-        : boost
-          ? `${(t.importance || "normal").replaceAll("_", " ")} importance · approaching ${plan.label.toLowerCase()}`
-          : `${(t.importance || "normal").replaceAll("_", " ")} importance`,
-    evaluated_at: NOW,
-    next_change_at: null as null,
-    source_task_id: undefined as string | undefined,
+    key: [String(9-importance(t)-Math.max(h,b)).padStart(2,"0"), 3-h, 6-importance(t), timeKey(promoted),
+      timeKey(extra[0]), timeKey(extra[1]), plan?.current ? 0 : 1,
+      timeKey(remaining[0]), timeKey(remaining[1]), timeKey(remaining[2])].join(":"),
+    reason: h > 0 && h >= b ? h === 3 ? `${winning.label} ${winning.end <= now ? "overdue" : "due soon"}`
+      : `${(t.importance || "normal").replaceAll("_", " ")} importance · approaching ${winning.label.toLowerCase()}`
+      : b > 0 ? `${(t.importance || "normal").replaceAll("_", " ")} importance · approaching buffer target`
+      : plan?.current ? "Planned now" : `${(t.importance || "normal").replaceAll("_", " ")} importance`,
+    evaluated_at: NOW, next_change_at: null, source_task_id: undefined as string | undefined,
+    effective_deadline: f.deadline, deadline_project: f.project, project_fallback: f.fallback, policy: "priority-v4",
   };
 }
 export const urgencyNames = [
@@ -159,54 +164,27 @@ const upcoming = (at: number) =>
       : at <= now + 28 * DAY
         ? 2
         : 1;
-export function timing(t: Task, seriesZone = ZONE) {
-  let urgency = 0,
-    work_block: Moment | null = null,
-    scheduled: Moment | undefined;
-  for (const [, m] of constraints(t)) {
-    const end = bound(m, true);
-    const immediate = m.time ? end - 2 * HOUR : bound(m);
-    urgency = Math.max(
-      urgency,
-      now >= end ? 6 : now >= immediate ? 5 : upcoming(end),
-    );
+export function timing(t: Task, seriesZone = ZONE, f = facts(t)) {
+  let urgency = 0, evidence: [number, number] = [3, Number.MAX_SAFE_INTEGER];
+  let work_block: Moment | null = null, scheduled: Moment | undefined;
+  const plan = selectedPlan(t, seriesZone);
+  const flags = (f.deadline ? 1 : 0) | (!t.started && t.start_by ? 2 : 0) | (plan ? 4 : 0);
+  for (const [, m] of constraints(t, f)) {
+    const end = bound(m, true), immediate = m.time ? end - 2*HOUR : bound(m);
+    const u = now >= end ? 6 : now >= immediate ? 5 : upcoming(end);
+    if (u > urgency || u === urgency && end < evidence[1]) { urgency = u; evidence = [0,end]; }
   }
   if (urgency) {
     const target = buffer(t);
-    if (urgency < 5 && target !== undefined && upcoming(target) >= 3)
-      urgency = Math.max(urgency, upcoming(target));
-    return { urgency, work_block, scheduled };
+    if (urgency < 5 && target !== undefined && upcoming(target) >= 3 && upcoming(target) > urgency) {
+      urgency = upcoming(target); evidence = [1,target];
+    }
+  } else if (plan) {
+    urgency = now >= plan.end ? 6 : now >= (plan.moment.time ? plan.start-2*HOUR : plan.start) ? 5 : upcoming(plan.start);
+    evidence = [2, now >= plan.end ? plan.end : plan.start];
+    if (plan.occurrence) scheduled = plan.moment; else work_block = plan.moment;
   }
-  const choices = blocks(t).sort((a, b) => {
-    const k = (v: typeof a) =>
-      v.end <= now
-        ? [2, now - v.end]
-        : v.start <= now
-          ? [0, v.end - now]
-          : [1, v.start - now];
-    const x = k(a),
-      y = k(b);
-    return x[0] - y[0] || x[1] - y[1];
-  });
-  const b = choices[0];
-  if (b) {
-    urgency =
-      now >= b.end
-        ? 6
-        : now >= (b.block.start.time ? b.start - 2 * HOUR : b.start)
-          ? 5
-          : upcoming(b.start);
-    work_block = b.block.start;
-  } else if (t.occurrence) {
-    scheduled = { date: t.occurrence.scheduled_date, timezone: seriesZone };
-    urgency =
-      now >= bound(scheduled, true)
-        ? 6
-        : now >= bound(scheduled)
-          ? 5
-          : upcoming(bound(scheduled));
-  }
-  return { urgency, work_block, scheduled };
+  return { urgency, work_block, scheduled, flags, evidence, effective_deadline: f.deadline, deadline_project: f.project };
 }
 export function graph(records: Task[]) {
   const byId = new Map(records.filter((t) => !t.deleted).map((t) => [t.id, t]));
@@ -229,12 +207,14 @@ export function graph(records: Task[]) {
     order.push(t);
   }
   for (const t of byId.values()) visit(t);
-  const ranks = new Map(records.map((t) => [t.id, rank(t)]));
+  const resolved = new Map(records.map(t => [t.id, facts(t, byId.get(t.project_id || ""))]));
+  const ranks = new Map(records.map((t) => [t.id, rank(t, resolved.get(t.id), byId.get(t.occurrence?.series_id || "")?.recurrence?.timezone)]));
+  const own = new Map([...ranks].map(([id, r]) => [id, r.key]));
   const placements = new Map(
     records.filter(live).map((t) => [
       t.id,
       {
-        ...timing(t),
+        ...timing(t, byId.get(t.occurrence?.series_id || "")?.recurrence?.timezone, resolved.get(t.id)),
         importance: importance(t),
         priority_from: null as { id: string; title: string } | null,
         urgency_from: undefined as { id: string; title: string } | undefined,
@@ -246,14 +226,23 @@ export function graph(records: Task[]) {
       const source = placements.get(t.id),
         target = placements.get(id);
       if (source && target) {
-        if (source.importance > target.importance) {
+        target.flags |= source.flags;
+        const importanceSource = source.priority_from || { id: t.id, title: t.title };
+        if (source.importance > target.importance || source.importance === target.importance && target.priority_from && importanceSource.id < target.priority_from.id) {
           target.importance = source.importance;
           target.priority_from = source.priority_from || {
             id: t.id,
             title: t.title,
           };
         }
-        if (source.urgency > target.urgency) {
+        const urgencySource = source.urgency_from || { id: t.id, title: t.title };
+        const evidenceOrder = source.evidence[0] - target.evidence[0] || source.evidence[1] - target.evidence[1];
+        if (source.urgency > target.urgency || source.urgency === target.urgency && (evidenceOrder < 0 || evidenceOrder === 0 && target.urgency_from && urgencySource.id < target.urgency_from.id)) {
+          target.evidence = source.evidence;
+          target.work_block = source.work_block;
+          target.scheduled = source.scheduled;
+          target.effective_deadline = source.effective_deadline;
+          target.deadline_project = source.deadline_project;
           target.urgency = source.urgency;
           target.urgency_from = source.urgency_from || {
             id: t.id,
@@ -267,14 +256,16 @@ export function graph(records: Task[]) {
         live(b) &&
         ["next", "blocked", "waiting"].includes(t.status) &&
         ["next", "blocked", "waiting"].includes(b.status) &&
-        ranks.get(t.id)!.key < ranks.get(id)!.key
+        (ranks.get(t.id)!.key < ranks.get(id)!.key || ranks.get(t.id)!.key === ranks.get(id)!.key && ranks.get(id)!.source_task_id &&
+          (ranks.get(t.id)!.source_task_id || t.id) < ranks.get(id)!.source_task_id!)
       )
         ranks.set(id, {
-          ...ranks.get(t.id)!,
+          ...ranks.get(id)!, key: ranks.get(t.id)!.key, reason: ranks.get(t.id)!.reason,
           source_task_id: ranks.get(t.id)!.source_task_id || t.id,
         });
     }
   }
+  for (const t of records) ranks.get(t.id)!.key += `:${own.get(t.id)}:${live(t) && t.started ? 0 : 1}`;
   return { byId, ranks, placements };
 }
 const timingFields = [

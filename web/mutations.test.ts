@@ -376,3 +376,16 @@ test("nested capture keeps its own retry slot without treating the project as a 
   assert.equal(c.state.captureReceipt,null);
   assert.equal(c.state.receipts.get("project-capture:project")?.task.id,"new");
 });
+
+test("project changes update derived facts at the same task version without corrupting frozen views", () => {
+  const c = controller(async () => receipt as any);
+  const recommendation = (revision: number, deadline: string) => ({ key: "rank", reason: "Project deadline", evaluated_at: "2026-11-10T12:00:00Z", next_change_at: null, revision, policy: "priority-v4", effective_deadline: { date: deadline, timezone: "UTC" }, deadline_project: { id: "p", title: "Project" } });
+  const old = { ...task, recommendation: recommendation(1, "2026-12-01") };
+  const fresh = { ...task, notes: undefined, recommendation: recommendation(2, "2026-11-11") };
+  c.observe([fresh]);
+  c.observe([old]); // A delayed body read still has useful text.
+  assert.equal(c.state.current.get(task.id)?.notes, task.notes);
+  assert.equal(c.state.current.get(task.id)?.recommendation?.revision, 2);
+  assert.equal(c.project(fresh).recommendation?.effective_deadline?.date, "2026-11-11");
+  assert.equal(c.project(old).recommendation?.effective_deadline?.date, "2026-12-01");
+});

@@ -501,7 +501,13 @@ impl AccountTransaction<'_> {
     ) -> Result<Value> {
         let exact = input.project_id.is_some();
         let filter = ListItems {
-            sort: input.sort,
+            sort: Some(input.sort.unwrap_or(if input.query.is_some() {
+                TaskSort::Relevance
+            } else if input.review_on.is_some() {
+                TaskSort::Review
+            } else {
+                TaskSort::Due
+            })),
             query: input.query,
             task_id: input.project_id,
             status: input.status.map(Into::into).or(

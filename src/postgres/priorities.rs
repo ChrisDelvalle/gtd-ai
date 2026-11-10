@@ -260,4 +260,70 @@ mod tests {
             assert_eq!(page["items"][0], *row);
         }
     }
+    #[test]
+    #[ignore = "Disposable PostgreSQL project fallback, exact closure and frozen filtering"]
+    fn project_deadline_resolves_before_dependency_inheritance_and_survives_sorting() {
+        let (_container, mut admin, runtime, _, _) = fixture();
+        admin
+            .execute("DELETE FROM gtd.tasks WHERE id='shared'", &[])
+            .unwrap();
+        let store = Store::connect(runtime, Environment::Staging, 2).unwrap();
+        let account = principal("a");
+        let project = run(&store, "a", "project", json!({"request_id":"project","title":"Launch","brief":"Deliver the fictional launch.","agent_notes":"Disposable project deadline inheritance fixture.","due_date":"2000-01-01","reason":"Disposable policy fixture"})).task;
+        let root = run(&store, "a", "capture", capture("root")).task;
+        let mut child = capture("child");
+        child["project_id"] = json!(project.id);
+        child["blocked_by"] = json!([root.id]);
+        child["importance"] = json!("critical");
+        let child = run(&store, "a", "capture", child).task;
+        let before = high(&store, "a");
+        let full = store
+            .list(&account, input(json!({"task_id":root.id})))
+            .unwrap();
+        let r = full.items[0].recommendation.as_ref().unwrap();
+        assert_eq!(r.source_task_id.as_deref(), Some(child.id.as_str()));
+        assert_eq!(r.reason, "Project deadline overdue");
+        assert!(r.effective_deadline.is_none()); // Own field sorting never borrows a dependency's date.
+        let child_read = store
+            .list(&account, input(json!({"task_id":child.id})))
+            .unwrap();
+        assert_eq!(
+            child_read.items[0]
+                .recommendation
+                .as_ref()
+                .unwrap()
+                .deadline_project
+                .as_ref()
+                .unwrap()
+                .id,
+            project.id
+        );
+        assert_eq!(high(&store, "a"), before);
+        let grid = store.priority_grid(&account, Query::default()).unwrap();
+        assert_eq!(grid["counts"][6][6]["next"], 1);
+        assert_eq!(grid["timing_counts"][6][6][1]["next"], 1);
+        let args = json!({"snapshot":grid["snapshot"],"cell":{"importance":"critical","urgency":"overdue","timing":"deadlines"},"sort":"created_desc"});
+        let page = store.priority_grid(&account, input(args.clone())).unwrap();
+        assert_eq!(page["items"][0]["id"], root.id);
+        assert_eq!(page["items"][0]["importance_from"]["id"], child.id);
+        assert_eq!(page["items"][0]["urgency_from"]["id"], child.id);
+        assert_eq!(page["items"][0]["deadline_project"]["id"], project.id);
+        assert!(
+            store
+                .priority_grid(&principal("b"), input(args.clone()))
+                .is_err()
+        );
+        run(
+            &store,
+            "a",
+            "update_project",
+            json!({"request_id":"later-project","project_id":project.id,"expected_version":project.version,"due_date":"2099-01-01","reason":"Snapshot isolation"}),
+        );
+        assert_eq!(
+            store.priority_grid(&account, input(args)).unwrap()["items"],
+            page["items"]
+        );
+        let fresh = store.priority_grid(&account, Query::default()).unwrap();
+        assert_eq!(fresh["counts"][6][1]["next"], 1);
+    }
 }

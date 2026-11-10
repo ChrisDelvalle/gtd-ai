@@ -932,6 +932,20 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
     await expect(frame.locator(".widget-surface")).toHaveAttribute("data-display", "fullscreen");
     await expect(frame.getByRole("complementary", {name: "Navigation"})).toBeInViewport();
     await expect.poll(async () => Math.abs(await middleSquareOffsetFromPane(chart))).toBeLessThan(1);
+    // Exercise the new controls against a real frozen backend result, rather
+    // than the oversized-count presentation fixture above.
+    await chart.getByRole("button", {name: "Project: Any project"}).click();
+    await frame.getByRole("menuitemradio", {name: "Widget chart project", exact:true}).click();
+    await chart.getByRole("button", {name: "Timing: All timing"}).click();
+    await frame.getByRole("menuitemradio", {name: "Deadlines", exact:true}).click();
+    await expect(normalUndated).toHaveText("");
+    await overdue.click();
+    await expect(task).toBeVisible();
+    await list.getByRole("button", {name: "Sort: Recommended"}).click();
+    await frame.getByRole("menuitemradio", {name: "Newest first", exact:true}).click();
+    await expect(list.getByRole("button", {name: "Sort: Newest first"})).toBeVisible();
+    await expect(task).toBeVisible();
+    await frame.locator(".widget-surface").screenshot({path: info.outputPath("priority-sorted-expanded.png"), animations:"disabled"});
   }
 });
 });

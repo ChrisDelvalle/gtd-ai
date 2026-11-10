@@ -175,8 +175,9 @@ export function Help({embedded = false}: {embedded?: boolean}) {
           </li>
           <li>
             Recommended keeps Next actions first in combined lists. Within each status,
-            immediate timing commitments come first, then current planned work,
-            then importance with a small boost for approaching deadlines or Start by.
+            importance combines with a bounded boost for deadlines and outstanding Start by.
+            Planned work and started tasks break comparable ties. A task without its own
+            deadline can use its active project’s deadline; Inbox and Someday do not.
           </li>
           <li>
             History shows changes to one task; Activity shows changes across all

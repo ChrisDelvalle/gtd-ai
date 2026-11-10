@@ -370,6 +370,11 @@ export function TaskRow({
             )}
           </span>
         )}
+        {!task.due_date && task.recommendation?.effective_deadline && task.recommendation.deadline_project && (
+          <span className="date-chip" title={`Project deadline · ${task.recommendation.deadline_project.title}: ${momentLabel(task.recommendation.effective_deadline)}`}>
+            <CalendarDays /><span>{shortDate(task.recommendation.effective_deadline.date)}<small className="date-chip-source">Project</small></span>
+          </span>
+        )}
         {task.due_date && inlineDetails ? (
           <span
             className="date-chip"

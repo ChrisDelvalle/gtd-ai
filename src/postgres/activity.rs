@@ -362,7 +362,7 @@ impl AccountTransaction<'_> {
     }
     pub(super) fn results(&mut self, q: ResultsQuery) -> Result<Value> {
         let ids = self.request_records(&q.from_request_ids)?;
-        let key = json!({"requests":q.from_request_ids,"sort":q.sort});
+        let key = json!({"requests":q.from_request_ids,"sort":q.sort.unwrap_or(crate::activity::ResultsSort::ResultOrder)});
         let base = if let Some(token) = &q.snapshot {
             let decoded = Cursor::decode(token)?;
             if decoded.query["requests"] != key["requests"] {
@@ -401,16 +401,23 @@ impl AccountTransaction<'_> {
         }
         .encode()?;
         let max = limit(q.limit, 5)?;
-        let titles=self.tx.query("SELECT entity_id,document::jsonb->>'title',seq FROM (SELECT DISTINCT ON(entity_id) entity_id,seq,document FROM gtd.revisions WHERE account_id=$1 AND seq<=$2 AND entity_id=ANY($3) ORDER BY entity_id,seq DESC) r", &[&self.account.id,&cursor.high,&ids])?;
-        let mut ordered: Vec<(String, String, i64)> = titles
+        let titles=self.tx.query("SELECT entity_id,document::jsonb->>'title',seq,created FROM (SELECT DISTINCT ON(entity_id) entity_id,seq,MIN(seq) OVER(PARTITION BY entity_id) AS created,document FROM gtd.revisions WHERE account_id=$1 AND seq<=$2 AND entity_id=ANY($3) ORDER BY entity_id,seq DESC) r", &[&self.account.id,&cursor.high,&ids])?;
+        let mut ordered: Vec<(String, String, i64, i64)> = titles
             .into_iter()
-            .map(|r| (r.get(0), r.get::<_, String>(1).to_lowercase(), r.get(2)))
+            .map(|r| {
+                (
+                    r.get(0),
+                    r.get::<_, String>(1).to_lowercase(),
+                    r.get(2),
+                    r.get(3),
+                )
+            })
             .collect();
         ordered.sort_by(|a, b| {
             if q.sort == Some(crate::activity::ResultsSort::Title) {
-                a.1.cmp(&b.1).then(a.0.cmp(&b.0))
+                a.1.cmp(&b.1).then(a.3.cmp(&b.3)).then(a.0.cmp(&b.0))
             } else {
-                b.2.cmp(&a.2).then(a.0.cmp(&b.0))
+                b.2.cmp(&a.2).then(a.3.cmp(&b.3)).then(a.0.cmp(&b.0))
             }
         });
         let chosen: Vec<_> = ordered

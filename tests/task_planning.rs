@@ -95,14 +95,16 @@ fn buffer_is_bounded_planning_cue_not_immediate() {
     assert_eq!(target.time.as_deref(), Some("12:00"));
     let now = "2026-10-08T17:00:00Z".parse().unwrap();
     let rank = evaluate(&t, now);
-    assert!(rank.key.starts_with("2:"));
-    assert!(rank.reason.contains("buffer target"));
+    let mut unbuffered = t.clone();
+    unbuffered.planning.safety_buffer = None;
+    assert_eq!(rank.key, evaluate(&unbuffered, now).key);
+    assert!(rank.reason.contains("deadline"));
     let active = capture(
         &mut s,
         "active-block",
         json!({"importance":"low","work_blocks":[{"start":m("2026-10-08","12:00"),"finish":m("2026-10-08","14:00")}]}),
     );
-    assert!(evaluate(&active, now).key < rank.key);
+    assert!(rank.key < evaluate(&active, now).key);
     let changed = edit(&mut s, &t, "move", json!({"due_date":"2026-10-12"}));
     assert_eq!(
         changed

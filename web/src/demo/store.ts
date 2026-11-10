@@ -11,6 +11,8 @@ import {
 } from "../api";
 import {
   annotate,
+  facts,
+  compareText,
   blocks,
   bound,
   different,
@@ -200,32 +202,32 @@ export class DemoStore {
       : graph(records);
   }
   private ordered(records = this.records, args: Args = {}) {
-    const ranks = this.derivedFor(records).ranks,
-      seq = new Map(records.map((t, i) => [t.id, i]));
+    const ranks = this.derivedFor(records).ranks;
+    const created = new Map(this.records.map((t, i) => [t.id, i]));
+    const order = (a: Task, b: Task) => (created.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (created.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+      || compareText(a.created_at || "", b.created_at || "") || compareText(a.id, b.id);
+    const sort = args.sort || (args.review_on ? "review" : args.status === "done" || args.archived === true ? "updated" : "action");
     return [...records].sort((a, b) => {
-      const date = (key: keyof Task) =>
-        String(a[key] || "9999").localeCompare(String(b[key] || "9999"));
-      const order = () => seq.get(a.id)! - seq.get(b.id)!;
-      if (
-        args.sort === "updated" ||
-        (!args.sort && (args.status === "done" || args.archived === true))
-      )
-        return b.last_change_id - a.last_change_id;
-      if (args.sort === "created") return order();
-      if (args.sort === "importance")
-        return importance(b) - importance(a) || order();
-      if (args.sort === "due") return date("due_date") || order();
-      if (args.review_on && date("review_date")) return date("review_date");
-      return (
-        Number(!!a.archived) - Number(!!b.archived) ||
-        statuses.indexOf(a.status) - statuses.indexOf(b.status) ||
-        ranks.get(a.id)!.key.localeCompare(ranks.get(b.id)!.key) ||
-        order()
-      );
+      const date = (key: keyof Task) => compareText(String(a[key] || "9999"), String(b[key] || "9999"));
+      if (sort === "updated") return b.last_change_id - a.last_change_id || order(a,b);
+      if (sort === "created") return order(a,b);
+      if (sort === "created_desc") return -order(a,b);
+      if (sort === "importance") return importance(b) - importance(a) || order(a,b);
+      if (sort === "title") return compareText(a.title.toLowerCase(), b.title.toLowerCase()) || order(a,b);
+      if (sort === "due" || sort === "effective_due") {
+        const at = (t: Task) => {
+          const m = sort === "due" ? facts(t).deadline : ranks.get(t.id)?.effective_deadline;
+          return m ? bound(m, true) : Number.MAX_SAFE_INTEGER;
+        };
+        return at(a)-at(b) || order(a,b);
+      }
+      if (sort === "review") return date("review_date") || order(a,b);
+      return Number(!!a.archived) - Number(!!b.archived) || statuses.indexOf(a.status) - statuses.indexOf(b.status)
+        || compareText(ranks.get(a.id)!.key, ranks.get(b.id)!.key) || order(a,b);
     });
   }
-  private decorate(t: Task): Task {
-    const g = this.derivedFor(this.records),
+  private decorate(t: Task, state: State = this.state()): Task {
+    const g = this.derivedFor(state.records),
       label = (x: Task) => ({
         id: x.id,
         title: x.title,
@@ -236,10 +238,10 @@ export class DemoStore {
       const b = g.byId.get(id);
       return b ? [label(b)] : [];
     });
-    const dependents = this.records
+    const dependents = state.records
       .filter((b) => !b.deleted && b.blocked_by?.includes(t.id))
       .map(label);
-    const project = this.records.find((p) => p.id === t.project_id),
+    const project = state.records.find((p) => p.id === t.project_id),
       blocking = prerequisites
         .filter((b) => b.status !== "done" && !b.occurrence?.skipped)
         .map((b) => b.id);
@@ -247,7 +249,7 @@ export class DemoStore {
       ...copy(t),
       detail: "full",
       omitted_fields: [],
-      recommendation: g.ranks.get(t.id),
+      recommendation: { ...g.ranks.get(t.id)!, revision: state.changes.at(-1)?.id || 0 },
       has_agent_notes: !!t.agent_notes,
       has_notes: !!t.notes,
       has_completion_result: !!t.completion_result,
@@ -307,9 +309,9 @@ export class DemoStore {
           blocks(t).some(
             (b) =>
               (!args.planned_from ||
-                b.block.start.date >= String(args.planned_from)) &&
+                b.end > bound({date:String(args.planned_from),timezone:ZONE})) &&
               (!args.planned_through ||
-                b.block.start.date <= String(args.planned_through)),
+                b.start < bound({date:String(args.planned_through),timezone:ZONE},true)),
           )),
     );
     if (args.group_recurrences && !args.task_id && !args.task_ids) {
@@ -338,14 +340,14 @@ export class DemoStore {
         next_change_at: null,
         detail: "full",
         scope: args.status || args.view || "active",
-        sort: args.sort || "action",
+        sort: args.sort || (args.query ? "relevance" : args.review_on ? "review" : args.status === "done" || args.archived === true ? "updated" : "action"),
         group_recurrences: !!args.group_recurrences,
       },
     );
     return { ...page, items, history: [], next_history_after: null };
   }
   private projects(args: Args) {
-    const rows = this.records
+    const rows = this.ordered(this.records, { ...args, sort: args.sort || (args.review_on ? "review" : "due") })
       .filter(
         (t) =>
           t.entity_type === "project" &&
@@ -583,6 +585,7 @@ export class DemoStore {
     const snapshot = args.snapshot ? String(args.snapshot) : this.freeze(),
       records = this.state(snapshot).records,
       g = graph(records);
+    const timing_counts = Array.from({length:7}, () => Array.from({length:7}, () => Array.from({length:8}, () => Object.fromEntries(statuses.map(s => [s,0])))));
     const counts = Array.from({ length: 7 }, () =>
         Array.from({ length: 7 }, () =>
           Object.fromEntries(
@@ -594,7 +597,7 @@ export class DemoStore {
         ),
       ),
       previews: any[][] = Array.from({ length: 49 }, () => []);
-    for (const t of this.ordered(records)) {
+    for (const t of this.ordered(records, { sort: args.cell ? args.sort : "action" })) {
       const p = g.placements.get(t.id);
       if (
         !p ||
@@ -607,11 +610,14 @@ export class DemoStore {
       )
         continue;
       counts[p.importance][p.urgency][t.status]++;
+      timing_counts[p.importance][p.urgency][p.flags][t.status]++;
       previews[p.importance * 7 + p.urgency].push({
         id: t.id,
         title: t.title,
         status: t.status,
         work_block: p.work_block,
+        timing_flags: p.flags, effective_deadline: p.effective_deadline, deadline_project: p.deadline_project,
+        importance_from: p.priority_from,
         scheduled: p.scheduled,
         priority_from: p.priority_from,
         urgency_from: p.urgency_from,
@@ -622,11 +628,14 @@ export class DemoStore {
           importance: Task["importance"];
           urgency: string;
           scope: string;
+          timing?: string;
         },
         i = 6 - importanceLevels.indexOf(cell.importance!),
         u = urgencyNames.indexOf(cell.urgency);
       if (i < 0 || u < 0) fail("Invalid priority cell.");
-      const rows = previews[i * 7 + u].filter(
+      const rows = previews[i * 7 + u].filter(t => !cell.timing || cell.timing === "all" ||
+        cell.timing === "undated" && u === 0 ||
+        !!(t.timing_flags & ({deadlines:1,start_by:2,planned:4}[cell.timing] || 0))).filter(
         (t) =>
           cell.scope === "all" ||
           (cell.scope === "committed" &&
@@ -640,6 +649,7 @@ export class DemoStore {
     }
     return {
       counts,
+      timing_counts, policy: "priority-v4",
       previews,
       snapshot,
       kind: "priorities",
@@ -676,15 +686,18 @@ export class DemoStore {
       case "priority_grid":
         return this.priorities(args);
       case "request_results": {
+        args = { ...args, sort: args.sort || "result_order" };
         const ids = this.requestIds(args.from_request_ids),
+          snapshot = args.snapshot ? String(args.snapshot) : this.freeze(),
+          frozen = this.state(snapshot).records,
+          selected = ids.map(id => frozen.find(t => t.id === id)!).filter(Boolean),
+          ordered = this.ordered(selected, { ...args, sort: !args.sort || args.sort === "result_order" ? "updated" : args.sort }),
           { rows: records, ...page } = this.page(
             name,
-            args,
-            ids.map((id) =>
-              this.decorate(this.records.find((t) => t.id === id)!),
-            ),
+            { ...args, snapshot: undefined },
+            ordered.map(t => this.decorate(t, this.state(snapshot))),
             {
-              snapshot: this.freeze(),
+              snapshot, sort: args.sort || "result_order",
               from_request_ids: args.from_request_ids,
             },
           );
