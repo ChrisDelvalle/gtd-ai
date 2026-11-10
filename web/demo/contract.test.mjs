@@ -454,3 +454,75 @@ test("date-only and timed boundaries respect DST and ambiguous local times", () 
     Date.parse("2026-11-01T06:30Z"),
   );
 });
+
+const scriptedBuild = await build({
+  entryPoints: ["src/demo/scenarios.ts"],
+  bundle: true,
+  write: false,
+  platform: "node",
+  format: "esm",
+});
+const { runScenario } = await import(
+  "data:text/javascript;base64," +
+    Buffer.from(scriptedBuild.outputFiles[0].text).toString("base64")
+);
+test("scripted conversations remain independent and capture is exactly once", () => {
+  const pickup = store(),
+    energy = store(),
+    captureStore = store();
+  assert.equal(runScenario(pickup, "pickup").launch.page, "Charts");
+  const small = runScenario(energy, "energy");
+  assert.equal(small.launch.page, "Tasks");
+  runScenario(captureStore, "capture");
+  runScenario(captureStore, "capture");
+  assert.equal(captureStore.records.length, fixture.records.length + 3);
+  assert.equal(captureStore.changes.length, fixture.changes.length + 3);
+  assert.equal(pickup.records.length, fixture.records.length);
+  assert.equal(energy.records.length, fixture.records.length);
+  const result = captureStore.execute("request_results", {
+    from_request_ids: ["script-capture-once"],
+  });
+  assert.equal(result.records.length, 3);
+  assert.equal(result.records.filter((t) => t.status === "someday").length, 1);
+});
+test("project lifecycle changes validate the final atomic batch", () => {
+  const s = store(),
+    project = s.execute("create_project", {
+      request_id: "lifecycle",
+      title: "Local project",
+    }).project;
+  const task = capture(s, "Project action", { project_id: project.id });
+  assert.throws(
+    () =>
+      s.execute("update_project", {
+        request_id: "premature",
+        project_id: project.id,
+        expected_version: 1,
+        status: "done",
+      }),
+    /unfinished/,
+  );
+  s.execute("apply_changes", {
+    request_id: "finish-project",
+    operations: [
+      {
+        operation: "update_project",
+        project_id: project.id,
+        expected_version: 1,
+        status: "done",
+      },
+      {
+        operation: "update",
+        task_id: task.task.id,
+        expected_version: 1,
+        status: "done",
+      },
+    ],
+  });
+  assert.equal(s.records.find((t) => t.id === project.id).status, "done");
+  assert.equal(
+    s.execute("list_changes", { from_request_ids: ["finish-project"] }).changes
+      .length,
+    2,
+  );
+});

@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
 const base = "/gtd-ai";
 test.beforeEach(async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("close", () => expect(errors).toEqual([]));
   await page.route("**/*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.origin).toBe("http://127.0.0.1:4175");
@@ -258,4 +264,72 @@ test("initial state ignores host time and timezone", async ({ browser }) => {
     await context.close();
   }
   expect(outputs[0]).toEqual(outputs[1]);
+});
+
+test("charts, recurrence browsing, and keyboard expansion", async ({
+  page,
+}, info) => {
+  await page.goto(`${base}/website/`);
+  await page
+    .getByRole("button", { name: "Chart: Priorities", exact: true })
+    .click();
+  await page
+    .getByRole("menuitemradio", { name: "Heatmap", exact: true })
+    .click();
+  await expect(page.locator(".heat-grid button")).toHaveCount(364);
+  await page.screenshot({ path: info.outputPath("heatmap.png") });
+  await page
+    .getByRole("button", { name: "Chart: Heatmap", exact: true })
+    .click();
+  await page
+    .getByRole("menuitemradio", { name: "Bar Chart", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "30d", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({ path: info.outputPath("bars.png") });
+  await page.goto(`${base}/website/#/repeating`);
+  await expect(
+    page.getByRole("button", {
+      name: "Review commitments and the coming week Every Friday",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.goto(`${base}/chat/#energy`);
+  await page.getByRole("button", { name: "Use light theme" }).click();
+  await page.getByRole("button", { name: "Send prepared example" }).click();
+  const frame = page.frameLocator(
+    'iframe[title="GTD widget — Twenty minutes, low energy"]',
+  );
+  await frame
+    .getByRole("button", { name: "Expand view", exact: true })
+    .press("Enter");
+  await expect(
+    page.getByRole("button", { name: "Close expanded view" }),
+  ).toBeFocused();
+  await page.screenshot({ path: info.outputPath("chat-light-expanded.png") });
+  await page
+    .getByRole("button", { name: "Close expanded view" })
+    .press("Escape");
+  await expect(
+    frame.getByRole("button", { name: "Expand view", exact: true }),
+  ).toBeFocused();
+});
+
+test("failed fixture load offers a working local retry", async ({ page }) => {
+  page.removeAllListeners("console");
+  let fail = true;
+  await page.route("**/maya-*.json", (route) => {
+    if (fail) {
+      fail = false;
+      return route.fulfill({ status: 503, body: "Unavailable" });
+    }
+    return route.fallback();
+  });
+  await page.goto(`${base}/website/`);
+  await expect(page.getByRole("alert")).toContainText("could not load");
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Priorities chart" }),
+  ).toBeVisible();
 });

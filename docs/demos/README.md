@@ -23,3 +23,25 @@ The fixture is derived from the authored November 2025–November 2026 story and
 From `web/`, run `npm ci`, `npm run build:demos`, then `npm run demo:serve`. Open `/gtd-ai/website/` or `/gtd-ai/chat/` on the printed local address. `npm run test:demos` checks the local data contracts; `npm run test:demos:browser` checks the published artifact with disposable browser state.
 
 The separate Pages build shares assets across both demos. Production builds do not include the fixture or browser-local data service. GitHub Actions publishes only after deterministic checks succeed. No model calls are part of the build or tests.
+
+## Updating the examples
+
+Edit the reviewed JSON parts listed in `web/demo/maya/manifest.json`; keep task, project, occurrence, and history references consistent. The public fixture has 1,082 tasks, 11 projects, four recurring definitions, and 1,303 changes. Eight ordinary household actions have an explicit Home location so the low-energy example can filter on context. Keep fictional names and identifiers; do not export a personal account or copy operational files into this directory.
+
+The three prepared exchanges are in `web/src/demo/scenarios.ts`. The capture example saves an idempotent batch receipt; its response says what was recorded, without claiming to contact anyone. Each mounted conversation owns a separate `DemoStore`. Records and edits are held in memory, not persisted. The local search supports words and structured filters, without the production search service's typo tolerance. Recurring definitions and external actions return a demo limitation.
+
+Regenerate the reference in a disposable database after deliberately changing the fixture or domain behavior:
+
+```sh
+TODO_ENVIRONMENT=test TODO_BENCHMARK_NOW=2026-11-06T18:00:00Z \
+  cargo run --locked --features benchmark-clock --example demo_reference > /tmp/demo-reference.json
+node web/demo/check-reference.mjs /tmp/demo-reference.json
+```
+
+The example creates its own temporary SQLite database and refuses to run without the fixed test environment. It compares every initial ranking and history classification, all status pages, and both activity measures against Rust. Review intentional changes before replacing `web/demo/reference.json`; do not update expected output just to silence a failure.
+
+## Publication
+
+The `demos` job builds the artifact from committed source and checks the data contracts, packaging, and Chromium/WebKit interactions. The `publish-demos` job waits for every deterministic CI job, then publishes through the `github-pages` environment on `main`. Pull requests cannot publish. The artifact contains only the static demos and their shared assets; no production deployment commands or credentials are involved.
+
+Browser tests assert that runtime requests remain GETs to the static site. A restrictive Content Security Policy provides a second boundary. External task links are disabled. The production asset dependency graph is tested separately to keep demo data and transport out of normal releases.
