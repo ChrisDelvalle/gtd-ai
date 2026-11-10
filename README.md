@@ -2,6 +2,8 @@
 
 **A self-hosted task system for people and AI assistants.**
 
+[Try the website demo](https://chrisdelvalle.github.io/gtd-ai/website/) · [Explore the chat demo](https://chrisdelvalle.github.io/gtd-ai/chat/)
+
 <p align="center">
   <img src="docs/images/home.png" width="800" alt="GTD AI Home with the priorities grid, featured task, and Next actions">
 </p>
