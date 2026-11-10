@@ -114,3 +114,10 @@ Docker layers, npm downloads, and the advisory-checker binary). Local `just dev`
 and `just demos` smoke checks served healthy loopback endpoints and were stopped;
 argument forwarding for `just deploy-local` was checked without invoking an
 installation. Production GTD services and data were not changed.
+
+The follow-up warm-cache run exposed a build-wrapper issue: Compose did not pass
+Bake's read entitlement for the external restored cache. Cached builds now use
+Compose's resolved Bake definition and grant access only to the selected cache
+directory. A disposable scratch-image check passed both cold export and warm
+import with filesystem checks enabled. Uncached builds retain the ordinary
+Compose path. The failed run is not counted as release acceptance.

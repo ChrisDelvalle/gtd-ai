@@ -78,7 +78,19 @@ if args.cache_dir:
     cache_config = output / "compose-cache.json"
     cache_config.write_text(json.dumps(override))
     compose.extend(["-f", str(cache_config)])
-subprocess.run([*compose, "build"], cwd=root, check=True)
+    # Compose delegates to Bake but does not forward filesystem entitlements
+    # for external cache sources. Use its resolved build definition and grant
+    # only the explicit cache paths, rather than disabling Bake's checks.
+    bake_config = output / "bake-cache.json"
+    bake_config.write_bytes(subprocess.check_output([*compose, "build", "--print"], cwd=root))
+    build = ["docker", "buildx", "bake", "-f", str(bake_config), "--load"]
+    if sources:
+        build.extend(["--allow", f"fs.read={current}"])
+    # Bake checks the existing parent when the output directory is new.
+    build.extend(["--allow", f"fs.write={cache}"])
+else:
+    build = [*compose, "build"]
+subprocess.run(build, cwd=root, check=True)
 if args.cache_dir:
     # Replace instead of accumulating stale layers indefinitely. The previous
     # cache remains intact if building or exporting failed.
