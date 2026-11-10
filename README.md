@@ -18,10 +18,10 @@ every conversation into forms or maintain all those fields yourself.
 
 Separate agent notes give your assistant somewhere to preserve the working
 context behind each task: decisions, progress, open questions, and details it
-will need later. It can read those notes in a fresh conversation and pick up the
-work without filling your task descriptions with internal bookkeeping or asking
-you to explain everything again. The fields you read stay focused on what you
-need to do.
+will need later. It can read those notes and pick up the work without filling
+user-facing fields with internal bookkeeping. Your task descriptions stay
+readable, and you don't have to reconstruct the backstory every time you start
+a fresh chat.
 
 That structure pays off when choosing what to do, too. Effort, estimated duration,
 deadlines, dependencies, and priority let your assistant turn an everyday question
