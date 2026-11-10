@@ -103,6 +103,7 @@ jobs:
         with:
           name: browser-results-${{ matrix.browser }}-attempt-${{ github.run_attempt }}
           path: web/test-results/**/results.json
+          if-no-files-found: error
           retention-days: 30
   dependencies:
     runs-on: ubuntu-24.04
@@ -189,6 +190,7 @@ jobs:
         with:
           name: demo-results-attempt-${{ github.run_attempt }}
           path: web/demo-results/results.json
+          if-no-files-found: error
           retention-days: 30
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

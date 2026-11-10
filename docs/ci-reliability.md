@@ -43,3 +43,14 @@ The original touch failure did not reproduce in 12 macOS Chromium and 20 Linux
 Chromium runs with event tracing. Those passes are not proof of a fix. The trace
 identified the unsynchronized scroll/tap boundary; candidate repetitions and the
 complete CI run are required before promotion.
+
+The corrected touch scenario passed 20 Linux Chromium repetitions and ten WebKit
+repetitions. Related navigation, recurrence, editing, expansion and timezone
+scenarios passed 60 repetitions in each engine, with no retries. CI report files
+use explicit paths and are checked separately from the test exit status.
+
+[Full CI run 42919867454](https://github.com/ChrisDelvalle/gtd-ai/actions/runs/42919867454)
+passed on its first attempt: 400 Chromium and 399 WebKit tests, plus source,
+dependency/security, installation and demo checks. Browser JSON artifacts were
+verified. A follow-up corrects the demo JSON output path and makes missing result
+artifacts an error; that path was independently verified with a demo browser test.
