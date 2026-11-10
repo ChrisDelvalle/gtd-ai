@@ -24,7 +24,7 @@ const child = spawn(
   {
     cwd: web,
     stdio: "inherit",
-    env: process.env,
+    env: { ...process.env, GTD_TEST_REPORT: join(output, "results.json") },
   },
 );
 child.on("error", (error) => {

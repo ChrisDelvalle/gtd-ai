@@ -71,6 +71,30 @@ share the disposable server. Parallelizing those before isolating their state
 would trade runtime for unreliable results. Chromium and WebKit already run in
 separate jobs.
 
+Browser checks fail on their first failed attempt. Retries are explicitly off,
+focused tests are rejected in CI, and a test marked flaky cannot turn a job green.
+CI retains machine-readable results for 30 days on successful and failed runs;
+failure traces and screenshots remain available for seven days.
+
+An inconsistent failure needs a diagnosis, not a green rerun. Compare the trace
+with the intended behavior, distinguish a product defect from incomplete test
+setup, and wait for a specific result (a saved response, loaded content, settled
+host size or completed gesture). Do not replace assertions with sleeps, forced
+clicks or retries. Preserve the original failure when investigating.
+
+After fixing an intermittent case, repeat the affected scenario in both engines
+and run the complete suite before release. For example:
+
+```sh
+just test-browser activity-charts.spec.ts --grep 'widget charts navigation' --repeat-each=20 --max-failures=1
+just test-browser-webkit activity-charts.spec.ts --grep 'widget charts navigation' --repeat-each=20 --max-failures=1
+```
+
+Repetitions are diagnostic runs: every attempt must pass. They do not replace
+the full suite or prove that every possible machine and event timing is covered.
+The [reliability review](ci-reliability.md) records known failure families and
+their dispositions.
+
 ## Browser and protocol tests
 
 ```sh

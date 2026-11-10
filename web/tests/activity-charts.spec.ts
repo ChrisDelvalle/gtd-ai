@@ -1,6 +1,7 @@
 import { test, expect, type Page, type FrameLocator, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { revealForTap } from "./helpers/touch";
 
 async function selectChart(page: Page | FrameLocator, mode: "heatmap" | "bars" | "priorities") {
   await page.getByRole("button", {name: /^Chart: /}).click();
@@ -890,6 +891,7 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
       const card = element.closest(".widget-surface")!.getBoundingClientRect();
       return element.scrollHeight > element.clientHeight && element.getBoundingClientRect().bottom <= card.bottom;
     })).toBe(true);
+    await expect.poll(() => list.evaluate(node => node.getAnimations({subtree: true}).length)).toBe(0);
     const heading = (await list.getByRole("heading").boundingBox())!;
     if (browserName === "chromium") await panel.evaluate(element => {
       element.dataset.gestureEnded = "false";
@@ -914,9 +916,11 @@ for (const launch of ["home", "results", "charts"]) test(`widget ${launch} navig
     await expect(list).toBeVisible();
     await frame.locator(".widget-surface").screenshot({path: info.outputPath("priority-sheet.png"), animations: "disabled"});
     const beforeMore = calls.length;
-    // Keep paging on touch too: exercise the swipe, page and close as one native
-    // touch sequence, without an intervening mouse-driven scroll to the footer.
-    await list.getByRole("button", {name:"Load more"}).tap();
+    // Reveal the footer and let its scroll paint before the native tap. Keep
+    // touch input, the exact page count, and the one-call assertion below.
+    const more = list.getByRole("button", {name:"Load more"});
+    await revealForTap(more, ".priority-sheet-panel");
+    await more.tap();
     await expect(list.locator("li")).toHaveCount(21);
     expect(offset).toBe(20);
     expect(calls.slice(beforeMore)).toEqual(["priority_grid"]);

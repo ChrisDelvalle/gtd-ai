@@ -16,6 +16,9 @@ export default defineConfig({
   testDir: join(import.meta.dirname, "tests"),
   globalSetup: join(import.meta.dirname, "global-setup.ts"),
   workers: 1,
+  forbidOnly: !!process.env.CI,
+  retries: 0,
+  failOnFlakyTests: true,
   webServer: externalServer
     ? undefined
     : {
@@ -33,6 +36,8 @@ export default defineConfig({
     browserName: process.env.GTD_TEST_BROWSER === "webkit" ? "webkit" : "chromium",
     viewport: { width: 1440, height: 1000 },
   },
-  reporter: "list",
+  reporter: process.env.GTD_TEST_REPORT
+    ? [["list"], ["json", { outputFile: process.env.GTD_TEST_REPORT }]]
+    : "list",
   timeout: 45000,
 });

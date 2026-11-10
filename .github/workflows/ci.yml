@@ -94,9 +94,16 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
-          name: disposable-browser-${{ matrix.browser }}
+          name: disposable-browser-${{ matrix.browser }}-attempt-${{ github.run_attempt }}
           path: web/test-results/
           retention-days: 7
+      - name: Retain first-attempt browser results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: browser-results-${{ matrix.browser }}-attempt-${{ github.run_attempt }}
+          path: web/test-results/**/results.json
+          retention-days: 30
   dependencies:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -173,9 +180,16 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: failure()
         with:
-          name: demo-browser-results
+          name: demo-browser-results-attempt-${{ github.run_attempt }}
           path: web/demo-results/
           retention-days: 7
+      - name: Retain first-attempt demo results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: demo-results-attempt-${{ github.run_attempt }}
+          path: web/demo-results/results.json
+          retention-days: 30
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
