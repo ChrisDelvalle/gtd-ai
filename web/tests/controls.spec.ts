@@ -106,6 +106,7 @@ for (const width of [320, 640]) {
       .evaluateAll((es) => es.map((e) => e.getBoundingClientRect().toJSON()));
     await f.getByRole("button", { name: "Search tasks", exact: true }).click();
     await expect(f.getByRole("searchbox")).toBeFocused();
+    await expect(f.getByRole("button", { name: "GTD navigation" })).toBeHidden();
     expect(
       await f
         .locator(".compact-row:visible")

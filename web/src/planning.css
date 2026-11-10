@@ -408,7 +408,7 @@
   height: auto;
 }
 @media (max-width: 440px) {
-  .widget .compact-widget[data-sort] > .compact-toolbar .list-controls {
+  .widget .compact-widget[data-sort] > .compact-toolbar .list-controls:not([hidden]) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
   }

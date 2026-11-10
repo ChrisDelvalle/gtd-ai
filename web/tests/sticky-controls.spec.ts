@@ -163,7 +163,8 @@ for (const width of [390, 760]) {
         parseFloat(getComputedStyle(e).paddingTop),
       );
       const banner = (await frame.locator(".test-mode").count()) ? 28 : 0;
-      const offset = inset + 48 + banner;
+      const toolbarHeight = (await frame.locator(projectCard ? ".project-toolbar" : ".compact-toolbar").first().boundingBox())!.height;
+      const offset = inset + toolbarHeight + banner;
       for (const distance of [350, 700, 1400]) {
         await card.evaluate(
           (el, y) => el.scrollTo({ top: y, behavior: "instant" }),

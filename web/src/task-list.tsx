@@ -7,6 +7,7 @@ import { useTaskScrollAnchor } from "./scroll-restoration";
 import {
   Activity,
   useEffect,
+  useLayoutEffect,
   useId,
   useRef,
   useMemo,
@@ -134,6 +135,29 @@ export function TaskList({
   const [plannedToday, setPlannedToday] = useViewState(cacheKey+":plannedToday", false);
   const nonSearchSort = useViewRef<string | undefined>(cacheKey+":nonSearchSort", input.sort as string | undefined);
   const scrollAnchor = useTaskScrollAnchor();
+  useLayoutEffect(() => {
+    const root = scrollAnchor.root.current;
+    if (!environment.embedded || !root) return;
+    const toolbar = root.querySelector<HTMLElement>(":scope > .browse-toolbar, :scope > .compact-toolbar");
+    if (!toolbar) return;
+    const measure = () => {
+      const style = getComputedStyle(toolbar);
+      if (style.position !== "sticky") {
+        root.style.removeProperty("--card-controls-offset");
+        return;
+      }
+      // Wrapped controls must not cover the pinned task header. Nested project
+      // lists retain their enclosing project's offset instead.
+      root.style.setProperty("--card-controls-offset", `${toolbar.getBoundingClientRect().height + (parseFloat(style.top) || 0)}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(toolbar);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--card-controls-offset");
+    };
+  });
   const preparation = useMemo(
     () => api.taskPreparation ? taskPreparation(api) : undefined,
     [api, revision, result],
