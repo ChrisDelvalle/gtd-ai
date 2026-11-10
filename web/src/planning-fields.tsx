@@ -1,3 +1,4 @@
+import { applicationNow } from "./application-clock";
 import { useEffect, useId, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
 import {
@@ -76,7 +77,7 @@ function localText(date: Date, timezone: string) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 export function nowMoment(): Moment {
-  const now = new Date(),
+  const now = new Date(applicationNow()),
     local = localText(now, defaultZone),
     time = local.slice(11);
   const offset = Math.round(

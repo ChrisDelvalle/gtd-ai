@@ -1,3 +1,4 @@
+import { applicationNow } from "./application-clock";
 import { BriefField } from "./brief-field";
 import { DependencyFields } from "./dependencies";
 import {
@@ -484,7 +485,7 @@ function DescriptionInspector({
       <p className="record-id">
         {task.id}
         <br />
-        Updated {time(task.updated_at || new Date().toISOString())} · Eastern
+        Updated {time(task.updated_at || new Date(applicationNow()).toISOString())} · Eastern
         time
       </p>
     </section>

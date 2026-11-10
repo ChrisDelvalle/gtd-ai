@@ -1,3 +1,4 @@
+import { applicationNow } from "./application-clock";
 import { Charts } from "./charts";
 import { taskPreparation } from "./task-preparation";
 import { homeModel } from "./home-model";
@@ -267,10 +268,10 @@ export function Home({
     let timer: ReturnType<typeof setTimeout>;
     const refresh = () => {
       if (document.visibilityState !== "visible") return;
-      if (Date.now() < Date.parse(next)) {
+      if (applicationNow() < Date.parse(next)) {
         timer = setTimeout(
           refresh,
-          Math.min(2147483647, Date.parse(next) - Date.now() + 50),
+          Math.min(2147483647, Date.parse(next) - applicationNow() + 50),
         );
         return;
       }
@@ -282,10 +283,10 @@ export function Home({
     };
     timer = setTimeout(
       refresh,
-      Math.min(2147483647, Math.max(100, Date.parse(next) - Date.now() + 50)),
+      Math.min(2147483647, Math.max(100, Date.parse(next) - applicationNow() + 50)),
     );
     const visible = () => {
-      if (Date.now() >= Date.parse(next)) refresh();
+      if (applicationNow() >= Date.parse(next)) refresh();
     };
     document.addEventListener("visibilitychange", visible);
     return () => {

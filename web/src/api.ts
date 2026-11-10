@@ -1,6 +1,7 @@
 import { environmentGuard } from "./environment-guard.ts";
 import { websiteIdentity } from "./website-identity.ts";
 import { defaultZone } from "./calendar-context.ts";
+import { applicationNow } from "./application-clock.ts";
 export const statuses = [
   "inbox",
   "next",
@@ -226,7 +227,7 @@ export function today() {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(new Date());
+  }).format(new Date(applicationNow()));
 }
 
 export type Args = Record<string, unknown>;

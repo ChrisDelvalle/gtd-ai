@@ -47,6 +47,9 @@ const enums: Record<string, readonly string[]> = {
   max_effort: ["trivial", "low", "medium", "high", "extreme"],
 };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let hashRouting = false;
+/** Static hosts have no application route fallback. Normal deployments use paths. */
+export function useHashRouting() { hashRouting = true; }
 
 /** Only public navigation state belongs in a URL. Never drafts, cursors or writes. */
 export function destinationUrl(route: Destination): string {
@@ -108,12 +111,16 @@ export function destinationUrl(route: Destination): string {
       for (const id of value.slice(0, 50))
         if (typeof id === "string" && uuid.test(id)) query.append(key, id);
   }
-  return path + (query.size ? "?" + query : "");
+  return (hashRouting ? "#" : "") + path + (query.size ? "?" + query : "");
 }
 
 export function urlDestination(
-  location: Pick<Location, "pathname" | "search">,
+  location: Pick<Location, "pathname" | "search"> & { hash?: string },
 ): Destination | null {
+  if (hashRouting && location.hash !== undefined) {
+    const route = new URL(location.hash.slice(1) || "/", "https://demo.invalid");
+    location = { pathname: route.pathname, search: route.search };
+  }
   const path = location.pathname.replace(/\/$/, "") || "/";
   const parts = path.split("/").filter(Boolean);
   const page = Object.entries(paths).find(

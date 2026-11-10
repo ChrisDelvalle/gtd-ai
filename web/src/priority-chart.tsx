@@ -1,3 +1,4 @@
+import { applicationNow } from "./application-clock";
 import {
   useEffect,
   useId,
@@ -306,7 +307,7 @@ export function PriorityChart({
     let timer: ReturnType<typeof setTimeout>;
     const check = () => {
       if (document.hidden) return;
-      const left = boundary ? Date.parse(boundary) - Date.now() : Infinity;
+      const left = boundary ? Date.parse(boundary) - applicationNow() : Infinity;
       if (left > 0) {
         if (Number.isFinite(left))
           timer = setTimeout(check, Math.min(left + 50, 2147483647));
