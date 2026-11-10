@@ -513,6 +513,51 @@ test("email triage captures only the two actionable messages, exactly once", () 
   assert.ok(!records.some((t) => /library/i.test(t.title)));
   assert.match(first.response, /haven’t replied/);
 });
+const conversationBuild = await build({
+  entryPoints: ["src/demo/conversations.ts"],
+  bundle: true,
+  write: false,
+  platform: "node",
+  format: "esm",
+});
+const { DemoConversations } = await import(
+  "data:text/javascript;base64," +
+    Buffer.from(conversationBuild.outputFiles[0].text).toString("base64")
+);
+test("cards share a conversation while other chats keep independent state", async () => {
+  let loads = 0;
+  const sessions = new DemoConversations(async () => {
+    loads++;
+    return fixture;
+  });
+  const [chart, task, other] = await Promise.all([
+    sessions.get("pickup"),
+    sessions.get("pickup"),
+    sessions.get("energy"),
+  ]);
+  assert.equal(loads, 1);
+  assert.equal(chart.store, task.store);
+  assert.notEqual(chart.store, other.store);
+  const id = task.script.additionalLaunches[0].input.task_ids[0];
+  assert.equal(
+    task.store.records.find((t) => t.id === id).title,
+    "Prepare the scrubbed exception replay for the release gate",
+  );
+  chart.store.execute("update_item", {
+    request_id: "finish-replay",
+    task_id: id,
+    expected_version: 1,
+    status: "done",
+  });
+  assert.equal(task.store.records.find((t) => t.id === id).status, "done");
+  assert.equal(other.store.records.find((t) => t.id === id).status, "next");
+  const [a, b] = await Promise.all([
+    sessions.get("capture"),
+    sessions.get("capture"),
+  ]);
+  assert.equal(a, b);
+  assert.equal(a.store.records.length, fixture.records.length + 3);
+});
 test("project lifecycle changes validate the final atomic batch", () => {
   const s = store(),
     project = s.execute("create_project", {

@@ -85,6 +85,7 @@ button svg {
   vertical-align: middle;
 }
 .chat-demo {
+  --viewer-shift: calc(100vw - 405px);
   height: 100dvh;
   overflow: hidden;
 }
@@ -106,6 +107,7 @@ button svg {
   border-radius: 8px;
 }
 .chat-sidebar {
+  font-feature-settings: normal;
   position: fixed;
   left: 56px;
   top: 4px;
@@ -146,6 +148,7 @@ button svg {
 .chat-history-row {
   justify-content: flex-start;
   font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
   min-height: 36px;
   padding: 8px 12px;
@@ -468,6 +471,33 @@ button svg {
   border-left: 1px solid var(--chat-border);
   background: var(--chat-bg);
 }
+.expanded-frame,
+.viewer-toolbar,
+.has-viewer::after {
+  animation: viewer-enter 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.viewer-closing .expanded-frame,
+.viewer-closing .viewer-toolbar,
+.has-viewer.viewer-closing::after {
+  animation: viewer-exit 260ms cubic-bezier(0.4, 0, 0.6, 1) both;
+  pointer-events: none;
+}
+@keyframes viewer-enter {
+  from {
+    transform: translateX(var(--viewer-shift));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes viewer-exit {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(var(--viewer-shift));
+  }
+}
 @media (max-width: 999px) {
   .chat-sidebar {
     width: 275px;
@@ -491,6 +521,9 @@ button svg {
   }
 }
 @media (max-width: 800px) {
+  .chat-demo {
+    --viewer-shift: 100vw;
+  }
   .chat-rail {
     height: 52px;
     bottom: auto;
@@ -562,6 +595,7 @@ button svg {
 }
 @media (prefers-reduced-motion: reduce) {
   * {
+    animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
   }

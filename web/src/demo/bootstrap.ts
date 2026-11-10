@@ -3,9 +3,12 @@ import { setDefaultZone } from "../calendar-context";
 import { NOW, ZONE } from "./domain";
 import type { Fixture } from "./store";
 declare const __DEMO_FIXTURE__: string;
-export async function loadDemo(): Promise<Fixture> {
+export function prepareClock() {
   setApplicationTime(NOW);
   setDefaultZone(ZONE);
+}
+export async function loadDemo(): Promise<Fixture> {
+  prepareClock();
   const response = await fetch(new URL(__DEMO_FIXTURE__, import.meta.url));
   if (!response.ok)
     throw new Error("The demo could not load. Reload to try again.");

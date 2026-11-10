@@ -28,10 +28,11 @@ export const scenarios = [
   },
 ] as const;
 export type ScenarioId = (typeof scenarios)[number]["id"];
+export const cardCount = (id: ScenarioId) => (id === "pickup" ? 2 : 1);
 export function runScenario(
   store: DemoStore,
   id: ScenarioId,
-): { response: string; launch: Launch } {
+): { response: string; launch: Launch; additionalLaunches?: Launch[] } {
   const project = (title: string) =>
     store.records.find((t) => t.entity_type === "project" && t.title === title)!
       .id;
@@ -40,6 +41,21 @@ export function runScenario(
       response:
         "**Start with the exception replay.** Two things need attention before pickup:\n\n1. **Prepare the replay — 15 minutes.** It unblocks the refund check, which needs another 55 minutes and is due at **2:30 PM**. You’re already past its latest start time, so I’d tackle this first.\n2. **Send the winter pickup authorization — 12 minutes.** It was due yesterday. The signed form is in the blue school folder; ask the office to confirm they’ve received it.",
       launch: { page: "Charts" },
+      additionalLaunches: [
+        {
+          page: "Tasks",
+          scope: "selected",
+          input: {
+            task_ids: [
+              store.records.find(
+                (t) =>
+                  t.title ===
+                  "Prepare the scrubbed exception replay for the release gate",
+              )!.id,
+            ],
+          },
+        },
+      ],
     };
   if (id === "capture") {
     store.execute("apply_changes", {

@@ -344,6 +344,41 @@ test("failed fixture load offers a working local retry", async ({ page }) => {
   ).toBeVisible();
 });
 
+for (const width of [800, 801, 999, 1000]) {
+  test(`viewer fits its pane at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`${base}/chat/#energy`);
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    const frame = page.frameLocator(
+      'iframe[title="GTD widget — Twenty minutes, low energy"]',
+    );
+    await frame
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        page
+          .locator(".expanded-frame")
+          .evaluate((el) =>
+            el.getAnimations().every((a) => a.playState === "finished"),
+          ),
+      )
+      .toBe(true);
+    const card = await page.locator(".expanded-frame").boundingBox();
+    const toolbar = await page.locator(".viewer-toolbar").boundingBox();
+    expect(
+      Math.abs(card!.x + card!.width / 2 - toolbar!.x - toolbar!.width / 2),
+    ).toBeLessThan(1);
+    expect(card!.x).toBeGreaterThanOrEqual(toolbar!.x - 1);
+    expect(card!.x + card!.width).toBeLessThanOrEqual(width + 1);
+    await page.screenshot({ path: info.outputPath("viewer-pane.png") });
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await expect(
+      frame.getByRole("button", { name: "Expand view", exact: true }),
+    ).toBeFocused();
+  });
+}
+
 for (const width of [390, 1440]) {
   test(`card opens before the reply streams at ${width}`, async ({
     page,
@@ -380,10 +415,13 @@ for (const width of [390, 1440]) {
     });
     const reply = pickup.locator(".streamed-reply");
     await expect(reply).toHaveAttribute("aria-busy", "true");
-    await expect(pickup.locator(".chat-result")).toBeVisible();
+    await expect(pickup.locator(".chat-result")).toHaveCount(2);
+    await expect(pickup.locator(".chat-result").first()).toBeVisible();
+    await expect(pickup.locator(".chat-result").last()).toBeVisible();
     expect(
       await pickup
         .locator(".chat-result")
+        .last()
         .evaluate((el) => !!el.nextElementSibling?.matches(".streamed-reply")),
     ).toBe(true);
     const first = await reply.textContent();
@@ -420,10 +458,13 @@ for (const width of [390, 1440]) {
     await expect(reply).toHaveAttribute("aria-busy", "false");
     await expect(reply).toContainText("confirm they’ve received it.");
     await expect(reply.locator("ol > li")).toHaveCount(2);
-    await expect(pickup.locator(".chat-result")).toBeVisible();
+    await expect(pickup.locator(".chat-result")).toHaveCount(2);
+    await expect(pickup.locator(".chat-result").first()).toBeVisible();
+    await expect(pickup.locator(".chat-result").last()).toBeVisible();
     expect(
       await pickup
         .locator(".chat-result")
+        .first()
         .evaluate((el) => getComputedStyle(el).transitionDuration),
     ).toBe("0.38s, 0.24s");
     expect(await page.locator(".chat-composer").innerText()).toBe("");
@@ -450,9 +491,140 @@ test("reduced motion skips streaming and card transitions", async ({
       .locator(".chat-result")
       .evaluate((el) => getComputedStyle(el).transitionDuration),
   ).toBe("0s");
+  const frame = page.frameLocator(
+    'iframe[title="GTD widget — A few things before I forget"]',
+  );
+  await frame.getByRole("button", { name: "Expand view", exact: true }).click();
+  expect(
+    await page
+      .locator(".expanded-frame")
+      .evaluate((el) => getComputedStyle(el).animationName),
+  ).toBe("none");
+  await page.getByRole("button", { name: "Close expanded view" }).click();
+  await expect(
+    frame.getByRole("button", { name: "Expand view", exact: true }),
+  ).toBeFocused();
 });
 
 for (const width of [390, 1440]) {
+  test(`priority and recommendation cards share changes at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await page.goto(`${base}/chat/#pickup`);
+    const sidebarType = await page
+      .locator(".chat-history-row")
+      .first()
+      .evaluate((el) => {
+        const s = getComputedStyle(el);
+        return {
+          size: s.fontSize,
+          weight: s.fontWeight,
+          line: s.lineHeight,
+          features: s.fontFeatureSettings,
+        };
+      });
+    expect(sidebarType).toEqual({
+      size: "14px",
+      weight: "400",
+      line: "20px",
+      features: "normal",
+    });
+    await page.getByRole("button", { name: "Send prepared example" }).click();
+    const chart = page.frameLocator(
+      'iframe[title="GTD widget — Before school pickup"]',
+    );
+    const task = page.frameLocator(
+      'iframe[title="GTD widget — Before school pickup — Recommended task"]',
+    );
+    const title = "Prepare the scrubbed exception replay for the release gate";
+    await expect(
+      task.getByRole("button", { name: `Details: ${title}`, exact: true }),
+    ).toBeVisible();
+    await expect(
+      chart.getByRole("region", { name: "Priorities chart" }),
+    ).toBeVisible();
+    await page
+      .locator(".chat-scroll:not([hidden]) .chat-result")
+      .last()
+      .scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath("priority-two-cards.png") });
+    await task
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await expect(page.locator('iframe[title$="Recommended task"]')).toHaveClass(
+      /expanded-frame/,
+    );
+    const slide = await page
+      .locator('iframe[title$="Recommended task"]')
+      .evaluate((el) => {
+        const animation = el
+          .getAnimations()
+          .find((a) => (a as CSSAnimation).animationName === "viewer-enter")!;
+        animation.pause();
+        animation.currentTime = 0;
+        const start = el.getBoundingClientRect().left;
+        animation.currentTime = 130;
+        const middle = el.getBoundingClientRect().left;
+        animation.currentTime = 260;
+        const end = el.getBoundingClientRect().left;
+        animation.play();
+        return { start, middle, end };
+      });
+    expect(slide.start).toBeGreaterThanOrEqual(width - 1);
+    expect(slide.middle).toBeGreaterThan(slide.end);
+    expect(slide.middle).toBeLessThan(slide.start);
+    await task
+      .getByRole("button", { name: `Details: ${title}`, exact: true })
+      .click();
+    await expect(
+      task.getByText(
+        "Stage a safe copy of the failing case so Maya can run the gate check.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await expect(
+      task.getByRole("button", { name: "Expand view", exact: true }),
+    ).toBeFocused();
+    await task
+      .getByRole("button", { name: `Mark complete: ${title}`, exact: true })
+      .click();
+    await chart
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await chart
+      .getByRole("button", { name: "Critical, Overdue: 1 task", exact: true })
+      .click();
+    await expect(
+      chart.getByRole("dialog").getByRole("button", {
+        name: "Verify refund exceptions before the merchant window",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      chart
+        .getByRole("dialog")
+        .getByRole("button", { name: title, exact: true }),
+    ).toHaveCount(0);
+    await chart.getByRole("button", { name: "Close task list" }).click();
+    await page.getByRole("button", { name: "Close expanded view" }).click();
+    await task
+      .getByRole("button", { name: "Undo last change", exact: true })
+      .click();
+    await chart
+      .getByRole("button", { name: "Expand view", exact: true })
+      .click();
+    await chart
+      .getByRole("button", { name: "Critical, Overdue: 1 task", exact: true })
+      .click();
+    await expect(
+      chart
+        .getByRole("dialog")
+        .getByRole("button", { name: title, exact: true }),
+    ).toBeVisible();
+  });
+
   test(`email sources and structured replies at ${width}`, async ({
     page,
   }, info) => {

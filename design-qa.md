@@ -4,11 +4,15 @@
 
 Intended behavior: four independent conversations, including a small fictional inbox with two actionable emails and one newsletter. A collapsed “Read 3 emails” disclosure lets visitors inspect the sources. Sending creates two tasks exactly once with the requested deadlines, projects, and source context; it never sends a reply or creates a task from the newsletter. The Results card appears before the assistant's summary. Replies use short paragraphs, real lists, and selective bold emphasis, following the supplied live reference without copying personal content. Formatting stays stable while text streams, including within bold phrases. Verify both themes, phone/desktop, expansion, source disclosure, reset, and conversation isolation before publication.
 
+The priorities exchange shows two separate cards: the chart, then the recommended replay task. Both cards belong to one conversation sandbox. Completing the replay must remove it from Next in the chart and unblock the refund check; undo restores both. Each card expands independently into a right-hand viewer with a 260ms slide, and slides out before returning to its own inline position and focus. Reduced motion skips both transitions. No extra model or network requests are introduced.
+
 ## Scripted chat streaming update
 
 Intended behavior: sending a prepared message opens the ready widget with a restrained 380ms height/fade transition, then streams the reply in short word groups underneath. Keep each conversation's progress when switching chats; do not rerun captures or restart completed replies. Reduced-motion preferences show the complete reply and card immediately. Remove the composer's visible labels, footer annotation, and post-send instructions; keep its message and send control, accessible names, and the small host-level demo identifier. Verify phone/desktop, both themes, switching during streaming, reduced motion, and inline/expanded cards before publication.
 
 The live reference composer and user message both use 16px, weight 400, 26px line height, normal letter spacing, and disabled `liga` features. Their font stack starts with `-apple-system-body`, then `ui-sans-serif`, `-apple-system`, and `system-ui`. Match those measured values in the demo; the previous composer used 24px line height and a different fallback order. No host font assets are copied.
+
+The reference sidebar was measured separately: the same font stack, 14px regular text, 20px line height, normal letter spacing, and normal font features. The sidebar uses those values without inheriting the composer's disabled ligatures.
 
 The update passes 34 demo browser checks and 24 existing WebKit surface-motion/expanded-header checks. Phone/light and desktop/dark screenshots were inspected. Coverage includes partial replies, widget-before-reply order, switching chats during streaming, reduced motion, and the measured composer typography. Resize writes now run outside observer delivery, and returning from expansion waits for the inline controls to mount before restoring focus.
 
@@ -22,7 +26,7 @@ Reference: the user-selected GTD Demo Reference conversation, inspected read-onl
 
 ## Checks
 
-Chromium and WebKit checks cover 390, 800, 1280, and 1440px website widths, light/dark themes, content-pane centering, concise mobile labels, task expansion, priority-list overlays, background scroll locking, local edits, undo, and reset. Both browsers exercise all three chats at 390 and 1440px, including inline/expanded cards and switching back without repeating a batch.
+Chromium and WebKit checks cover 390, 800, 1280, and 1440px website widths, light/dark themes, content-pane centering, concise mobile labels, task expansion, priority-list overlays, background scroll locking, local edits, undo, and reset. Both browsers exercise all four chats at 390 and 1440px, including inline/expanded cards and switching back without repeating a batch.
 
 Representative website, inline-chat, expanded-chat, and overlay screenshots were inspected. Desktop and phone expanded views were compared alongside the live-reference captures at matching viewport sizes. The desktop application inset was corrected to match the reference; the sidebar closes when expansion would otherwise cover the conversation. The first reset test exposed an invalid task URL after clearing a newly created record; Reset now returns the website to Home.
 

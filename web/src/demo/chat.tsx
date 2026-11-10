@@ -10,18 +10,32 @@ import {
   X,
   ExternalLink,
 } from "lucide-react";
-import { scenarios, type ScenarioId } from "./scenarios";
+import { cardCount, scenarios, type ScenarioId } from "./scenarios";
 import { StreamedReply } from "./streamed-reply";
 import { InboxPreview } from "./inbox";
+import { DemoConversations } from "./conversations";
+import { loadDemo } from "./bootstrap";
 type Progress = {
   sent: boolean;
   response: string;
-  height: number;
+  cards: Record<number, { height: number; ready: boolean }>;
   error?: string;
 };
 const initial = () =>
   Object.fromEntries(
-    scenarios.map((s) => [s.id, { sent: false, response: "", height: 450 }]),
+    scenarios.map((s) => [
+      s.id,
+      {
+        sent: false,
+        response: "",
+        cards: Object.fromEntries(
+          Array.from({ length: cardCount(s.id) }, (_, i) => [
+            i,
+            { height: 450, ready: false },
+          ]),
+        ),
+      },
+    ]),
   ) as Record<ScenarioId, Progress>;
 const selected = (): ScenarioId =>
   scenarios.find((s) => s.id === location.hash.slice(1))?.id || "pickup";
@@ -30,21 +44,40 @@ function Chat() {
     [progress, setProgress] = useState(initial),
     [theme, setTheme] = useState("dark");
   const [sidebar, setSidebar] = useState(() => innerWidth >= 1000),
-    [expanded, setExpanded] = useState<ScenarioId | null>(null);
-  const frames = useRef(new Map<ScenarioId, HTMLIFrameElement>()),
+    [expanded, setExpanded] = useState<string | null>(null);
+  const [sessions] = useState(() => new DemoConversations(loadDemo));
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frames = useRef(new Map<string, HTMLIFrameElement>()),
     closeButton = useRef<HTMLButtonElement>(null),
     sidebarButton = useRef<HTMLButtonElement>(null);
   const context = useRef({ theme, expanded });
   context.current = { theme, expanded };
-  function post(
-    id: ScenarioId,
-    type: string,
-    data: Record<string, unknown> = {},
-  ) {
+  function cancelClose() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+    setClosing(false);
+  }
+  function dismissCard(key: string) {
+    if (closeTimer.current) return;
+    const finish = () => {
+      closeTimer.current = null;
+      setExpanded(null);
+      setClosing(false);
+      post(key, "restore-focus");
+    };
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) finish();
+    else {
+      setClosing(true);
+      closeTimer.current = setTimeout(finish, 260);
+    }
+  }
+  function post(key: string, type: string, data: Record<string, unknown> = {}) {
+    const [id, card] = key.split(":");
     frames.current
-      .get(id)
+      .get(key)
       ?.contentWindow?.postMessage(
-        { demo: "gtd-ai", id, type, ...data },
+        { demo: "gtd-ai", id, card: Number(card), type, ...data },
         location.origin,
       );
   }
@@ -59,69 +92,121 @@ function Chat() {
   }, [theme, expanded]);
   useEffect(() => {
     const hash = () => {
+      cancelClose();
       setCurrent(selected());
       setExpanded(null);
     };
-    const message = (event: MessageEvent) => {
+    const message = async (event: MessageEvent) => {
       if (event.origin !== location.origin || event.data?.demo !== "gtd-ai")
         return;
       const id = event.data.id as ScenarioId;
+      const card = event.data.card;
+      const key = `${id}:${card}`;
       if (
         !scenarios.some((s) => s.id === id) ||
-        event.source !== frames.current.get(id)?.contentWindow
+        !Number.isInteger(card) ||
+        card < 0 ||
+        card >= cardCount(id) ||
+        event.source !== frames.current.get(key)?.contentWindow
       )
         return;
-      if (event.data.type === "ready") {
-        post(id, "context", {
-          theme: context.current.theme,
-          mode: context.current.expanded === id ? "fullscreen" : "inline",
-        });
-        post(id, "run");
+      if (["ready", "rendered", "call"].includes(event.data.type)) {
+        try {
+          const { store, script } = await sessions.get(id);
+          if (event.source !== frames.current.get(key)?.contentWindow) return;
+          if (event.data.type === "ready") {
+            post(key, "context", {
+              theme: context.current.theme,
+              mode: context.current.expanded === key ? "fullscreen" : "inline",
+            });
+            post(key, "launch", {
+              launch:
+                card === 0
+                  ? script.launch
+                  : script.additionalLaunches?.[card - 1],
+            });
+          }
+          if (event.data.type === "rendered")
+            setProgress((p) => {
+              const cards = {
+                ...p[id].cards,
+                [card]: { ...p[id].cards[card], ready: true },
+              };
+              return {
+                ...p,
+                [id]: {
+                  ...p[id],
+                  cards,
+                  response: Object.values(cards).every((c) => c.ready)
+                    ? script.response
+                    : "",
+                },
+              };
+            });
+          if (event.data.type === "call") {
+            const revision = store.changes.length;
+            const result = store.execute(event.data.name, event.data.args);
+            post(key, "result", { request: event.data.request, result });
+            if (store.changes.length !== revision) {
+              for (let i = 0; i < cardCount(id); i++)
+                if (i !== card) post(`${id}:${i}`, "changed");
+            }
+          }
+        } catch (error) {
+          const failure = error as Error & { code?: string };
+          if (event.data.type === "call")
+            post(key, "result", {
+              request: event.data.request,
+              error: { message: failure.message, code: failure.code },
+            });
+          else
+            setProgress((p) => ({
+              ...p,
+              [id]: { ...p[id], error: failure.message },
+            }));
+        }
       }
-      if (event.data.type === "response")
-        setProgress((p) => ({
-          ...p,
-          [id]: { ...p[id], response: String(event.data.text) },
-        }));
       if (event.data.type === "height" && Number.isFinite(event.data.height))
         setProgress((p) => ({
           ...p,
           [id]: {
             ...p[id],
-            height: Math.max(80, Math.min(450, event.data.height)),
+            cards: {
+              ...p[id].cards,
+              [card]: {
+                ...p[id].cards[card],
+                height: Math.max(80, Math.min(450, event.data.height)),
+              },
+            },
           },
         }));
       if (event.data.type === "dismiss") {
-        setExpanded(null);
-        post(id, "restore-focus");
+        dismissCard(key);
       }
       if (event.data.type === "expand") {
+        cancelClose();
         setCurrent(id);
-        setExpanded(id);
+        setExpanded(key);
         setSidebar(false);
       }
-      if (event.data.type === "error")
-        setProgress((p) => ({
-          ...p,
-          [id]: { ...p[id], error: String(event.data.text) },
-        }));
     };
     addEventListener("hashchange", hash);
     addEventListener("message", message);
     return () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
       removeEventListener("hashchange", hash);
       removeEventListener("message", message);
     };
   }, []);
   function choose(id: ScenarioId) {
+    cancelClose();
     location.hash = id;
     setCurrent(id);
     setExpanded(null);
     if (innerWidth < 1000) setSidebar(false);
   }
   function dismiss() {
-    setExpanded(null);
-    post(current, "restore-focus");
+    if (expanded) dismissCard(expanded);
   }
   useEffect(() => {
     const escape = (e: KeyboardEvent) => {
@@ -140,7 +225,7 @@ function Chat() {
   const script = scenarios.find((s) => s.id === current)!;
   return (
     <div
-      className={`chat-demo${sidebar ? " sidebar-open" : ""}${expanded ? " has-viewer" : ""}`}
+      className={`chat-demo${sidebar ? " sidebar-open" : ""}${expanded ? " has-viewer" : ""}${closing ? " viewer-closing" : ""}`}
     >
       <nav className="chat-rail" aria-label="Demo navigation">
         <button
@@ -233,9 +318,8 @@ function Chat() {
                     <div className="user-message">{s.prompt}</div>
                     <div className="assistant-message">
                       {s.id === "inbox" && p.response && <InboxPreview />}
-                      {!p.response && !p.error && (
-                        <p role="status">Opening GTD…</p>
-                      )}
+                      {!Object.values(p.cards).some((c) => c.ready) &&
+                        !p.error && <p role="status">Opening GTD…</p>}
                       {p.error && (
                         <p role="alert">
                           {p.error}{" "}
@@ -244,41 +328,49 @@ function Chat() {
                           </button>
                         </p>
                       )}
-                      <div
-                        className="chat-result"
-                        data-ready={!!p.response || undefined}
-                        inert={!p.response}
-                      >
-                        <div className="chat-result-body">
-                          <div className="tool-caption">
-                            <PanelTop size={17} />
-                            <span>Opened GTD</span>
-                          </div>
+                      {Object.entries(p.cards).map(([index, card]) => {
+                        const key = `${s.id}:${index}`;
+                        return (
                           <div
-                            className="inline-card-slot"
-                            style={{ height: p.height }}
+                            key={key}
+                            className="chat-result"
+                            data-ready={card.ready || undefined}
+                            inert={!card.ready}
                           >
-                            <iframe
-                              className={
-                                expanded === s.id
-                                  ? "demo-frame expanded-frame"
-                                  : "demo-frame"
-                              }
-                              title={`GTD widget — ${s.title}`}
-                              src={`../widget/#${s.id}`}
-                              ref={(node) => {
-                                if (node) frames.current.set(s.id, node);
-                                else frames.current.delete(s.id);
-                              }}
-                              style={{
-                                height:
-                                  expanded === s.id ? undefined : p.height,
-                              }}
-                              allow="clipboard-write"
-                            />
+                            <div className="chat-result-body">
+                              <div className="tool-caption">
+                                <PanelTop size={17} />
+                                <span>Opened GTD</span>
+                              </div>
+                              <div
+                                className="inline-card-slot"
+                                style={{ height: card.height }}
+                              >
+                                <iframe
+                                  className={
+                                    expanded === key
+                                      ? "demo-frame expanded-frame"
+                                      : "demo-frame"
+                                  }
+                                  title={`GTD widget — ${s.title}${index === "0" ? "" : " — Recommended task"}`}
+                                  src={`../widget/#${s.id}:${index}`}
+                                  ref={(node) => {
+                                    if (node) frames.current.set(key, node);
+                                    else frames.current.delete(key);
+                                  }}
+                                  style={{
+                                    height:
+                                      expanded === key
+                                        ? undefined
+                                        : card.height,
+                                  }}
+                                  allow="clipboard-write"
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        );
+                      })}
                       {p.response && <StreamedReply text={p.response} />}
                     </div>
                   </>

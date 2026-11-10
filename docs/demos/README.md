@@ -30,7 +30,7 @@ Edit the reviewed JSON parts listed in `web/demo/maya/manifest.json`; keep task,
 
 The four prepared exchanges are in `web/src/demo/scenarios.ts`: priorities before pickup, a loose capture of three tasks, email action items, and low-energy tasks at home. The capture and inbox examples save idempotent batch receipts; their replies say what was recorded without claiming to contact anyone. The inbox sources are authored alongside the scenario in `web/src/demo/inbox.tsx`: two emails require replies, while a library newsletter does not create a task. Deadlines reflect when the response is needed, rather than when the event happens.
 
-Cards appear before the assistant reply, which streams with brief paragraphs, lists, and bold emphasis. Reduced-motion preferences show the completed result immediately. The composer keeps only the prepared message and send control; the host-level demo indicator and reset remain available. Each mounted conversation owns a separate `DemoStore`. Records and edits are held in memory, not persisted. The local search supports words and structured filters, without the production search service's typo tolerance. Recurring definitions and external actions return a demo limitation.
+Cards appear before the assistant reply, which streams with brief paragraphs, lists, and bold emphasis. Reduced-motion preferences show the completed result immediately. The composer keeps only the prepared message and send control; the host-level demo indicator and reset remain available. The chat host owns one `DemoStore` per conversation. The priorities example shows both the chart and its recommended task in separate widgets; both use that same store and refresh each other after edits or undo. Frame messages are checked against their registered window, conversation, card, and origin. Each viewer slides in from the right and slides out before returning focus to its original inline card. Records and edits are held in memory, not persisted. The local search supports words and structured filters, without the production search service's typo tolerance. Recurring definitions and external actions return a demo limitation.
 
 Regenerate the reference in a disposable database after deliberately changing the fixture or domain behavior:
 
@@ -50,7 +50,7 @@ Browser tests assert that runtime requests remain GETs to the static site. A res
 
 ## Acceptance record
 
-The November 10, 2026 candidate passed these checks:
+The initial November 10, 2026 publication passed these checks:
 
 | Area | Evidence |
 |---|---|
@@ -68,3 +68,7 @@ The November 10, 2026 candidate passed these checks:
 No live model prompts were sent. The chat sequence is local and scripted; inspecting the live host for styling does not constitute host integration testing. Physical-device verification remains outstanding.
 
 Published demos: [website](https://chrisdelvalle.github.io/gtd-ai/website/) · [chat](https://chrisdelvalle.github.io/gtd-ai/chat/). The existing production application, accounts, databases, and connector registrations were not changed.
+
+### Chat presentation follow-up
+
+The follow-up adds a fourth conversation for email action items, streamed Markdown replies, measured composer/sidebar typography, and two linked cards in the priorities conversation. The viewer slides in and out from the right without remounting its card. Local verification covers 18 data/packaging checks and 50 Chromium/WebKit cases, including cross-card completion/undo, email source inspection, reduced motion, and both sides of the 800px and 1000px layout breakpoints. Representative phone and desktop screenshots are inspected before publication.
