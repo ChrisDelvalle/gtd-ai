@@ -419,6 +419,9 @@ test("Help stays static and navigating away cancels the refresh indicator", asyn
   const state = await fixture(page);
   try {
     await navigate(page, "Projects");
+    // Start the refresh only after the initial page has rendered. Otherwise the
+    // gate can catch its first read, before the refresh handler is registered.
+    await expect(page.getByRole("button", { name: "Agent project update 0", exact: true })).toBeVisible();
     const release = state.hold("list_projects");
     await pull(page);
     await held(page);
