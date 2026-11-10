@@ -1,14 +1,14 @@
-# GTD
+# GTD AI
 
 **A self-hosted task system for people and AI assistants.**
 
 <p align="center">
-  <img src="docs/images/home.png" width="800" alt="GTD Home with the priorities grid, featured task, and Next actions">
+  <img src="docs/images/home.png" width="800" alt="GTD AI Home with the priorities grid, featured task, and Next actions">
 </p>
 
-## About GTD
+## About GTD AI
 
-GTD combines David Allen's [Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done)
+GTD AI combines David Allen's [Getting Things Done](https://en.wikipedia.org/wiki/Getting_Things_Done)
 with the urgency-and-importance view of the [Eisenhower matrix](https://en.wikipedia.org/wiki/Time_management#Eisenhower_method).
 You talk through your work; your assistant turns it into an organized plan.
 It can break a goal into next actions, group them into projects, track blockers,
@@ -36,13 +36,13 @@ assistant combines the relevant fields to find work that fits the situation.
 It builds and maintains that structure from your conversations, so you get the
 benefit without taking on another job organizing the data.
 
-GTD puts those details to work even when you aren't asking a question. Its
+GTD AI puts those details to work even when you aren't asking a question. Its
 recommendation algorithm weighs importance, timing, and dependencies to bring
 the most pressing available work to the top. As deadlines approach and blockers
 clear, the order adapts, so you can see what deserves attention now without
 manually rearranging your list.
 
-GTD works best with a persistent, proactive assistant such as **ChatGPT Dot**
+GTD AI works best with a persistent, proactive assistant such as **ChatGPT Dot**
 that remembers how you like to work and can perform regular reviews and
 maintenance. With access to your email, calendar, and other sources of commitments,
 your assistant can turn new requests and upcoming events into action items,
@@ -51,12 +51,12 @@ You get a useful, detailed system without having to keep feeding and tidying it
 yourself: explain what matters, let your assistant organize the details, and get
 on with the work.
 
-## Why GTD?
+## Why GTD AI?
 
-Keeping a detailed task system up to date can become a job of its own. GTD lets
+Keeping a detailed task system up to date can become a job of its own. GTD AI lets
 your assistant handle that upkeep. Talk through a project, an idea, or a change
 of plan, and your assistant can turn it into concrete actions, dependencies,
-dates, and work blocks. Those details help GTD surface what needs your attention
+dates, and work blocks. Those details help GTD AI surface what needs your attention
 next, without making you maintain every field yourself.
 
 Your tasks also keep the useful context from those conversations: decisions,
@@ -76,7 +76,7 @@ interactive cards in ChatGPT and Claude. Browse projects, plan work, edit tasks,
 and review progress right in the conversation, then pick up the same tasks on the
 web whenever you like.
 
-![Managing a GTD project through an interactive task widget in ChatGPT](docs/images/chatgpt-widget.png)
+![Managing a GTD AI project through an interactive task widget in ChatGPT](docs/images/chatgpt-widget.png)
 
 ### Priorities
 
@@ -127,7 +127,7 @@ recap without relying on the current conversation.
 
 Full self-hosting uses a Linux server, Docker Compose, Python 3.11+, and HTTPS
 hostnames you control. The installation creates its own PostgreSQL, Keycloak,
-Meilisearch, and application services. No model API key is required to run GTD.
+Meilisearch, and application services. No model API key is required to run GTD AI.
 Cloudflare Tunnel is optional. Host subscriptions and connector availability are
 controlled by the host provider.
 
@@ -184,4 +184,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and
 
 Copyright © 2026 Chris Delvalle. Licensed under [AGPL-3.0-only](LICENSE).
 Third-party components retain their own licenses; see [NOTICE](NOTICE).
-GTD is independent of David Allen, OpenAI, and Anthropic.
+GTD AI is independent of David Allen, OpenAI, and Anthropic.
