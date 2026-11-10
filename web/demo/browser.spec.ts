@@ -203,6 +203,16 @@ for (const width of [390, 1440]) {
         exact: true,
       }),
     ).toBeVisible();
+    const resultTitle = frame.getByRole("button", {
+      name: "Details: Ask Priya whether the refund test is still failing",
+      exact: true,
+    });
+    expect(
+      await resultTitle.evaluate((el) => getComputedStyle(el).borderTopWidth),
+    ).toBe("0px");
+    expect(
+      await resultTitle.evaluate((el) => getComputedStyle(el).textAlign),
+    ).toBe("left");
     await page.screenshot({ path: info.outputPath("capture-results.png") });
     await page.getByRole("button", { name: "Close expanded view" }).click();
     await page

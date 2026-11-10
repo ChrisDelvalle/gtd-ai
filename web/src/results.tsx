@@ -133,7 +133,7 @@ export function Results({
   }
   return (
     <section
-      className="results-list"
+      className="results-list compact-widget"
       aria-label="Request results"
       aria-busy={busy}
     >

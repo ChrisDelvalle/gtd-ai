@@ -17,3 +17,5 @@ Representative website, inline-chat, expanded-chat, and overlay screenshots were
 The reconstruction intentionally replaces host branding and excludes account, model, upload, voice, billing, and unrelated chat controls. It uses the application's real components rather than screenshot replicas. Browser-emulated phone checks are not physical-device testing.
 
 Generated evidence is in ignored `web/demo-results/` after running the browser suite. CI retains failure screenshots and traces for seven days. Publication and data-contract acceptance are recorded in [the demo documentation](docs/demos/README.md).
+
+Screenshot review also caught Results task titles falling back to default bordered, centered buttons. Results now uses the same task-list styling wrapper as other shared views. A new border/alignment assertion was confirmed to fail on the previous build and pass on the candidate.
